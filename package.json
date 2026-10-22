@@ -1,14 +1,17 @@
 {
-  "name": "brainheaters-clone",
+  "name": "dbcm-study-resources",
   "version": "1.0.0",
-  "description": "Brainheaters Study Materials Platform - Engineering Notes, Question Banks, and PYQs",
+  "description": "Academic resource portal for Don Bosco College, Maram",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
-    "cors": "^2.8.5",
     "express": "^4.21.2"
   }
 }

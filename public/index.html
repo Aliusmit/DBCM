@@ -1,929 +1,120 @@
-<!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<!doctype html>
+<html lang="en" data-theme="light">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5">
-  <title>DBCM Study Material</title>
-  <meta name="description" content="Access comprehensive study materials, notes, question banks, and past papers across 14 DBCM academic departments. Organized by Major and Minor tracks, semester, and course.">
-  
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: ['selector', '[data-theme="dark"]'],
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eff6ff',
-              100: '#dbeafe',
-              500: '#3b82f6',
-              600: '#2563eb',
-              700: '#1d4ed8'
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- Custom CSS (Relative path for compatibility with both Node.js server and VS Code Live Server) -->
-  <link rel="stylesheet" href="css/styles.css">
-
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Find course PDFs, notes, previous-year papers, and lecture links for Don Bosco College, Maram.">
+  <meta name="theme-color" content="#f6f8fb">
+  <title>Study Resources | Don Bosco College, Maram</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Source+Serif+4:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/portal.css">
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-indigo-500 selection:text-white relative">
-
-  <!-- Professional Ambient Mesh & Grid Background -->
-  <div class="bg-grid-pattern"></div>
-  <div class="ambient-orb ambient-orb-1"></div>
-  <div class="ambient-orb ambient-orb-2"></div>
-  <div class="ambient-orb ambient-orb-3"></div>
-  <div class="hero-glow"></div>
-
-  <!-- Top Navigation Bar -->
-  <header class="sticky top-0 z-40 border-b border-white/10 bg-[#0a0a0f]/80 backdrop-blur-xl">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-      
-      <!-- DBCM Brand Logo -->
-      <a href="/" class="flex items-center gap-3 shrink-0 group">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/30 group-hover:scale-105 transition-transform">
-          <i data-lucide="graduation-cap" class="w-5 h-5 text-amber-300"></i>
-        </div>
-        <span class="text-lg font-black tracking-tight text-white flex items-center gap-1">
-          DBCM <span class="bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">Study Material</span>
-        </span>
+<body class="portal">
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="Don Bosco College Maram study resources home">
+        <img src="css/logo.jpeg" alt="Don Bosco College, Maram crest" width="56" height="56">
+        <span><strong>DBCM</strong><small>Study Resources</small></span>
       </a>
-
-      <!-- Right Navigation Actions: Admin Login + Bookmarks + Theme -->
-      <div class="flex items-center gap-2 sm:gap-2.5">
-
-        <!-- Admin Login / Portal Link -->
-        <a href="/admin" id="admin-btn" 
-          class="px-3 py-1.5 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold shadow-sm"
-          title="Admin Console (Upload Materials & Site Updation)">
-          <i data-lucide="shield-check" class="w-4 h-4 text-amber-400"></i>
-          <span id="admin-btn-label" class="hidden sm:inline">Admin</span>
-        </a>
-
-        <!-- Bookmarks Button -->
-        <button onclick="openBookmarksDrawer()" 
-          class="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-amber-400 transition-colors cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-          title="Saved Bookmarks">
-          <i data-lucide="bookmark" class="w-4 h-4"></i>
-          <span class="hidden md:inline">Saved</span>
+      <nav class="header-actions" aria-label="Main navigation">
+        <a class="nav-link" href="#course-finder">Find resources</a>
+        <a class="nav-link" href="#notices">Notices</a>
+        <a class="button button-outline" href="/admin">Admin sign in</a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Switch to dark theme" title="Switch theme">
+          <span aria-hidden="true">◐</span>
         </button>
-
-        <!-- Theme Switcher (Dark / Light) -->
-        <button id="theme-toggle-btn" 
-          class="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-all cursor-pointer flex items-center gap-1.5 text-xs font-semibold"
-          title="Switch Theme: Dark / Light">
-          <i data-lucide="moon" class="w-4 h-4 text-indigo-400"></i>
-          <span id="theme-label" class="hidden md:inline text-[11px]">Dark</span>
-        </button>
-      </div>
+      </nav>
     </div>
   </header>
 
-  <!-- Hero Section -->
-  <section class="relative pt-10 pb-6 px-4 sm:px-6 lg:px-8 text-center max-w-6xl mx-auto z-10">
-    <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-xs font-semibold text-blue-400 mb-5">
-      <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-      DBCM Official Study Material Portal • 14 Academic Departments • NEP Framework
-    </div>
+  <main>
+    <section class="intro page-width" aria-labelledby="page-title">
+      <p class="eyebrow">Don Bosco College, Maram · Academic resource directory</p>
+      <h1 id="page-title">Find the right material<br><span>for your course.</span></h1>
+      <p class="intro-copy">Choose your programme, semester, and subject to find available papers, notes, and lecture links.</p>
+      <div id="status-message" class="status-message" role="status" aria-live="polite">Loading course catalogue…</div>
+    </section>
 
-    <h1 class="text-2xl sm:text-4xl md:text-5xl lg:text-[54px] font-black text-white tracking-tight leading-tight">
-      DBCM Study Material <br class="hidden sm:block"/>
-      <span class="bg-gradient-to-r from-blue-400 via-indigo-400 to-violet-400 bg-clip-text text-transparent hero-single-line mt-1">
-        Find what you need for your next class.
-      </span>
-    </h1>
+    <section class="notice-band page-width" id="notices" aria-labelledby="notice-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">College updates</p><h2 id="notice-heading">Notice</h2></div>
+        <span class="notice-mark" aria-hidden="true">N</span>
+      </div>
+      <div id="notice-list" class="notice-list" aria-live="polite">
+        <p class="muted">Loading notices…</p>
+      </div>
+    </section>
 
-    <p class="mt-4 text-base sm:text-lg text-gray-400 max-w-2xl mx-auto leading-relaxed">
-      Curated chapter notes, unit-wise high-yield exam questions, verified past papers, and faculty lecture series across all 14 departments with dedicated Major and Minor tracks.
-    </p>
-
-    <!-- Main Search Input in Hero with Ambient Glow & Hover Animations -->
-    <div class="mt-8 max-w-2xl mx-auto relative group">
-      
-      <!-- Ambient Glow Behind Search Bar (Scales and illuminates on hover & focus) -->
-      <div class="absolute -inset-1 rounded-2xl bg-gradient-to-r from-blue-600/20 via-indigo-600/30 to-violet-600/20 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 blur-xl transition-all duration-500 pointer-events-none"></div>
-
-      <div class="relative flex items-center transition-all duration-300 group-hover:-translate-y-0.5">
-        <i data-lucide="search" class="w-5 h-5 text-gray-400 group-hover:text-indigo-400 group-focus-within:text-indigo-400 absolute left-4 pointer-events-none transition-all duration-300 group-hover:scale-110"></i>
-        
-        <input type="text" id="main-search-input" 
-          placeholder="Search subjects, codes, topics (e.g. C Programming, Plant Pathology, Macroeconomics)..."
-          autocomplete="off"
-          class="w-full bg-white/5 hover:bg-white/[0.08] focus:bg-white/[0.09] border border-white/15 hover:border-indigo-500/50 focus:border-indigo-500 rounded-2xl pl-12 pr-28 py-3.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 backdrop-blur-md transition-all duration-300 shadow-xl shadow-black/20 group-hover:shadow-2xl group-hover:shadow-indigo-500/15"
-        />
-
-        <!-- Clear 'X' Cross Button -->
-        <button id="search-clear-btn" type="button" onclick="clearMainSearch()" 
-          title="Clear search (Esc)"
-          class="hidden absolute right-24 p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/10 active:scale-95 transition-all cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-
-        <button onclick="triggerSearch()" 
-          class="absolute right-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 hover:shadow-lg hover:shadow-indigo-500/40 active:scale-95 text-white text-xs font-semibold shadow-md shadow-indigo-500/25 transition-all duration-200 cursor-pointer flex items-center gap-1.5">
-          <span>Search</span>
-        </button>
+    <section class="finder page-width" id="course-finder" aria-labelledby="finder-heading">
+      <div class="section-heading finder-heading">
+        <div><p class="eyebrow">Course material</p><h2 id="finder-heading">Browse resources</h2></div>
+        <label class="search-field">
+          <span class="sr-only">Search courses</span>
+          <span aria-hidden="true">⌕</span>
+          <input id="course-search" type="search" placeholder="Search course name or code" autocomplete="off">
+        </label>
       </div>
 
-      <div class="flex items-center justify-between text-[11px] text-gray-400 mt-2 px-1">
-        <span class="flex items-center gap-1.5 text-gray-400 group-hover:text-gray-300 transition-colors">
-          <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-          Search across 14 departments
-        </span>
-        <span>Tip: Press <kbd class="px-1.5 py-0.5 rounded bg-white/10 border border-white/10 font-mono text-[10px]">Esc</kbd> anytime to clear</span>
+      <div class="selection-grid">
+        <label class="field">
+          <span>1. Programme</span>
+          <select id="department-select" required><option value="">Select programme</option></select>
+        </label>
+        <label class="field">
+          <span>2. Track</span>
+          <select id="track-select" disabled><option value="">Select track</option></select>
+        </label>
+        <label class="field">
+          <span>3. Semester</span>
+          <select id="semester-select" disabled><option value="">Select semester</option></select>
+        </label>
+        <label class="field field-subject">
+          <span>4. Subject</span>
+          <select id="subject-select" disabled><option value="">Select subject</option></select>
+        </label>
       </div>
-    </div>
 
-    <!-- Hero Stats Bar -->
-    <div id="hero-stats-bar" class="mt-6 flex flex-wrap items-center justify-center gap-3">
-      <!-- Populated via JS -->
-    </div>
-
-    <!-- Announcements & Academic Updates Section (Replaces Recently Viewed) -->
-    <div id="announcement-section" class="mt-8 max-w-4xl mx-auto text-left">
-      <div class="p-4 sm:p-5 rounded-2xl bg-white/[0.04] border border-white/10 shadow-xl relative overflow-hidden backdrop-blur-md">
-        <!-- Top Title Bar -->
-        <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3.5 flex-wrap gap-2">
-          <div class="flex items-center gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/25">
-              <i data-lucide="bell" class="w-4 h-4 animate-bounce"></i>
-            </div>
-            <div>
-              <h3 class="text-xs sm:text-sm font-black text-white tracking-wide uppercase flex items-center gap-2">
-                Latest Academic Announcements & Updates
-                <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Live</span>
-              </h3>
-            </div>
-          </div>
-          <span class="text-[11px] text-gray-400 font-mono flex items-center gap-1">
-            <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-400"></i> Oct 2024 / Semester Session
-          </span>
+      <div id="selected-course" class="selected-course" hidden>
+        <div class="selected-course-title">
+          <div><span class="eyebrow" id="course-context"></span><h3 id="course-name"></h3><p id="course-description" class="muted"></p></div>
+          <span id="course-code" class="course-code"></span>
         </div>
-
-        <!-- Dynamic Announcement Cards Grid -->
-        <div id="announcement-cards-container" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <!-- Populated via JS -->
-        </div>
-
-        <!-- Live Broadcast Ticker from Admin -->
-        <div class="mt-3.5 pt-3 border-t border-white/5 flex items-center gap-2.5 text-xs text-gray-300">
-          <span class="px-2 py-0.5 rounded bg-blue-500/20 text-blue-400 font-mono font-bold text-[10px] shrink-0 uppercase tracking-wider">
-            Notice
-          </span>
-          <p id="live-broadcast-text" class="text-xs text-gray-300 truncate font-medium">
-            DBCM Study Material Portal Active: 14 Departments, Major & Minor Curricula, Lecture Notes, and Question Banks verified.
-          </p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Filter & Browse Section -->
-  <main id="subjects-section" class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full z-10">
-    
-    <!-- STEP 1: Department Filter (14 Departments in Exactly Two Lines as in image) -->
-    <div class="space-y-4 mb-8">
-      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
-        <div>
-          <span class="text-[11px] font-bold uppercase tracking-widest text-indigo-400 block mb-1">
-            Browse Material
-          </span>
-          <h2 class="text-2xl sm:text-3xl font-black text-white tracking-tight">
-            Choose a department
-          </h2>
-        </div>
-        <div class="flex items-center gap-2">
-          <span id="current-dept-badge" class="text-xs font-mono text-indigo-400 font-semibold bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
-            Select Department
-          </span>
-          <span class="text-xs text-gray-500 font-mono hidden sm:inline">155 subjects</span>
-        </div>
+        <details class="syllabus-details" id="syllabus-details" hidden>
+          <summary>Course outline</summary>
+          <div id="course-outline" class="outline-list"></div>
+        </details>
       </div>
 
-      <!-- Mobile Dropdown Selector (Optional quick pick on very small screens) -->
-      <div class="block sm:hidden">
-        <select id="department-select" onchange="selectDepartment(this.value)"
-          class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/20 text-xs font-semibold text-white focus:outline-none focus:border-indigo-500 cursor-pointer">
-          <option value="">-- Choose Academic Department --</option>
-          <!-- Populated via JS -->
-        </select>
+      <div class="resource-summary" aria-label="Available resource counts">
+        <button class="resource-count" type="button" data-category="pdf" disabled><span class="count-number" id="count-pdf">0</span><span>PDFs</span></button>
+        <button class="resource-count" type="button" data-category="pyqs" disabled><span class="count-number" id="count-pyqs">0</span><span>PYQs</span></button>
+        <button class="resource-count" type="button" data-category="notes" disabled><span class="count-number" id="count-notes">0</span><span>Notes</span></button>
+        <button class="resource-count" type="button" data-category="lectures" disabled><span class="count-number" id="count-lectures">0</span><span>Lecture links</span></button>
       </div>
 
-      <!-- 14 Departments in Exactly Two Lines (7 Columns x 2 Rows = 14 Departments, No Scroller) -->
-      <div id="department-chips-container" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
-        <!-- Populated via JS: 14 Departments in 2 Lines -->
+      <div id="resource-panel" class="resource-panel" hidden>
+        <div class="resource-panel-heading"><h3 id="resource-heading">Available resources</h3><button type="button" id="close-resources" class="text-button">Close</button></div>
+        <div id="resource-list" class="resource-list" aria-live="polite"></div>
       </div>
-    </div>
+    </section>
 
-    <!-- STEP 2: Major & Minor Track Selector (Only Major & Minor Buttons) -->
-    <div id="track-dropdown-section" class="mb-6 p-4 sm:p-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 transition-all duration-300 hidden shadow-xl">
-      <div class="flex flex-col md:flex-row md:items-center gap-4 sm:gap-6 md:gap-10">
-        
-        <!-- Step 2 Label (Left) -->
-        <div class="shrink-0 sm:max-w-xs lg:max-w-sm">
-          <div class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-2">
-            <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[11px] ring-1 ring-amber-500/40">2</span>
-            Choose Degree Track (Major or Minor)
-          </div>
-          <p class="text-xs text-gray-400 mt-1 leading-relaxed">
-            Select <strong class="text-white">Major</strong> for core degree subjects or <strong class="text-white">Minor</strong> for elective tracks.
-          </p>
-        </div>
-
-        <!-- Major & Minor Buttons (Full width touch targets on mobile, shifted right with gap on tablet/desktop) -->
-        <div id="track-quick-buttons" class="flex items-center gap-3 sm:gap-6 md:gap-8 flex-wrap w-full sm:w-auto sm:ml-8 md:ml-16 lg:ml-24">
-          <button onclick="selectTrack('major')" id="quick-btn-major"
-            class="group flex-1 sm:flex-initial justify-center px-5 py-3 sm:px-6 sm:py-3 rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2.5 shadow-sm border-white/10 bg-white/5 text-gray-300 hover:text-white hover:border-indigo-500/50 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 min-h-[44px]">
-            <i data-lucide="graduation-cap" class="w-4 h-4 text-indigo-400 group-hover:scale-110 transition-transform"></i>
-            <span>Major (<span id="major-count-chip">0</span>)</span>
-          </button>
-          
-          <button onclick="selectTrack('minor')" id="quick-btn-minor"
-            class="group flex-1 sm:flex-initial justify-center px-5 py-3 sm:px-6 sm:py-3 rounded-xl border text-xs sm:text-sm font-bold transition-all duration-200 cursor-pointer flex items-center gap-2.5 shadow-sm border-white/10 bg-white/5 text-gray-300 hover:text-white hover:border-cyan-500/50 hover:bg-white/10 hover:-translate-y-0.5 active:translate-y-0 min-h-[44px]">
-            <i data-lucide="book-marked" class="w-4 h-4 text-cyan-400 group-hover:scale-110 transition-transform"></i>
-            <span>Minor (<span id="minor-count-chip">0</span>)</span>
-          </button>
-        </div>
-
+    <section class="catalog page-width" aria-labelledby="catalog-heading">
+      <div class="section-heading">
+        <div><p class="eyebrow">Catalogue</p><h2 id="catalog-heading">Subjects in this programme</h2></div>
+        <span class="result-count" id="result-count">0 subjects</span>
       </div>
-    </div>
-
-    <!-- STEP 3: Semester Selector Pills (Unlocked after Department & Track are chosen) -->
-    <div id="semester-selector-section" class="mb-6 p-4 sm:p-5 rounded-2xl bg-white/[0.04] backdrop-blur-md border border-white/10 flex flex-col md:flex-row md:items-center gap-3.5 sm:gap-4 overflow-x-auto hidden shadow-xl scrollbar-none touch-scroll-x">
-      <span class="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider shrink-0 flex items-center gap-2">
-        <span class="w-5 h-5 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-[11px] ring-1 ring-amber-500/40">3</span>
-        Semester:
-      </span>
-      <div id="semester-pills-container" class="flex items-center gap-2 sm:gap-2.5 md:gap-3 flex-wrap">
-        <!-- Populated via JS -->
+      <div id="subject-list" class="subject-list" aria-live="polite">
+        <p class="muted">Select a programme to see its subjects.</p>
       </div>
-    </div>
-
-    <!-- Active Filter Summary Breadcrumb (Hidden until Track selected) -->
-    <div id="filter-summary-bar" class="mb-6 flex items-center justify-between flex-wrap gap-2 text-xs hidden">
-      <div class="flex items-center gap-2 text-gray-400 flex-wrap">
-        <span>Showing:</span>
-        <span id="active-dept-summary" class="font-bold text-white px-2 py-0.5 rounded bg-white/10">-</span>
-        <span>•</span>
-        <span id="active-track-summary" class="font-bold text-indigo-400 px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20">-</span>
-        <span>•</span>
-        <span id="active-sem-summary" class="text-gray-300">Semester 1</span>
-      </div>
-      <span id="subjects-count-badge" class="font-mono text-indigo-400 font-semibold bg-indigo-500/10 px-2.5 py-1 rounded-full border border-indigo-500/20">
-        0 Subjects Available
-      </span>
-    </div>
-
-    <!-- Subjects Grid -->
-    <div id="subjects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      <!-- Populated dynamically via JS -->
-    </div>
+    </section>
   </main>
 
-  <!-- ========================================================
-       BOTTOM ABOUT & MOTIVATIONAL SECTION (roadmap.sh style)
-       ======================================================== -->
-  <section id="about-section" class="border-t border-white/10 bg-[#08080d]/90 backdrop-blur-md pt-16 pb-12 z-10">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-      
-      <!-- Top Quick Links Header (roadmap.sh style) -->
-      <div class="flex items-center justify-center gap-6 sm:gap-10 pb-12 border-b border-white/10 flex-wrap text-xs font-semibold text-gray-400">
-        <a href="#subjects-section" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-          <i data-lucide="layers" class="w-3.5 h-3.5 text-blue-400"></i> Departments (14)
-        </a>
-        <a href="#subjects-section" onclick="selectTrack('major')" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-          <i data-lucide="graduation-cap" class="w-3.5 h-3.5 text-indigo-400"></i> Major Courses
-        </a>
-        <a href="#subjects-section" onclick="selectTrack('minor')" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-          <i data-lucide="book-marked" class="w-3.5 h-3.5 text-cyan-400"></i> Minor Electives
-        </a>
-        <a href="#" onclick="openSearchModal(); return false;" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-          <i data-lucide="search" class="w-3.5 h-3.5 text-amber-400"></i> Question Banks (IMPs)
-        </a>
-        <a href="/admin" class="hover:text-indigo-400 transition-colors flex items-center gap-1.5">
-          <i data-lucide="shield-check" class="w-3.5 h-3.5 text-rose-400"></i> Admin Console
-        </a>
-      </div>
-
-      <!-- Main Two-Column Grid: Left: About Don Bosco College Maram | Right: Motivational Quotes -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 pt-12 items-start">
-        
-        <!-- LEFT COLUMN: About Don Bosco College Maram -->
-        <div class="space-y-5">
-          <!-- College Branding Header -->
-          <div class="flex items-center gap-3.5">
-            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 shrink-0">
-              <i data-lucide="graduation-cap" class="w-6 h-6 text-amber-300"></i>
-            </div>
-            <div>
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="text-lg font-black text-white tracking-tight">Don Bosco College, Maram</h3>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">Autonomous</span>
-                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-blue-500/15 text-blue-400 border border-blue-500/25">NAAC A+</span>
-              </div>
-              <p class="text-[11px] text-gray-400 font-semibold tracking-wider uppercase mt-0.5">
-                Affiliated to Manipur University · Estd. 2000 · Salesians of Don Bosco
-              </p>
-            </div>
-          </div>
-
-          <!-- Description Paragraph (roadmap.sh style) -->
-          <p class="text-xs sm:text-sm text-gray-300 leading-relaxed">
-            Don Bosco College Maram (DBCM) is a premier higher education institution situated in Senapati District, Manipur. Founded on the educational pedagogy of St. John Bosco, DBCM blends rigorous academic learning with character formation, discipline, and community leadership. Offering undergraduate degree programs across 14 diverse departments under the National Education Policy (NEP) framework with specialized Major and Minor degree paths.
-          </p>
-
-          <!-- Core Pillars / Quick Badges -->
-          <div class="grid grid-cols-3 gap-2.5 pt-1">
-            <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-              <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Motto</div>
-              <div class="text-xs font-black text-indigo-400 mt-0.5">Virtus et Scientia</div>
-              <div class="text-[10px] text-gray-400">Virtue and Knowledge</div>
-            </div>
-            <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-              <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Academics</div>
-              <div class="text-xs font-black text-blue-400 mt-0.5">14 Departments</div>
-              <div class="text-[10px] text-gray-400">NEP Major & Minor</div>
-            </div>
-            <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-              <div class="text-[10px] uppercase font-bold text-gray-400 tracking-wider">Campus</div>
-              <div class="text-xs font-black text-amber-400 mt-0.5">Maram Khunou</div>
-              <div class="text-[10px] text-gray-400">Senapati, Manipur</div>
-            </div>
-          </div>
-
-          <!-- Bottom Footer Details & Social/Contact links -->
-          <div class="pt-2 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-3">
-            <span>© DBCM Study Material · Don Bosco College Maram</span>
-            <div class="flex items-center gap-3">
-              <a href="https://dbcmaram.ac.in" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors flex items-center gap-1 text-[11px]" title="Official DBCM Website">
-                <i data-lucide="globe" class="w-4 h-4 text-blue-400"></i> dbcmaram.ac.in
-              </a>
-              <a href="mailto:info@dbcmaram.ac.in" class="hover:text-white transition-colors" title="Email College">
-                <i data-lucide="mail" class="w-4 h-4 text-amber-400"></i>
-              </a>
-              <a href="https://maps.google.com/?q=Don+Bosco+College+Maram+Manipur" target="_blank" rel="noopener noreferrer" class="hover:text-white transition-colors" title="Campus Location Map">
-                <i data-lucide="map-pin" class="w-4 h-4 text-emerald-400"></i>
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <!-- RIGHT COLUMN: Student-Built Directory Info (from Image 1 & Image 3) -->
-        <div class="space-y-6 flex flex-col justify-center">
-          <div class="space-y-3">
-            <span class="text-xs font-bold uppercase tracking-widest text-slate-400 font-mono block">
-              ABOUT THIS PROJECT
-            </span>
-            <h2 class="text-3xl sm:text-4xl lg:text-[42px] font-extrabold tracking-tight text-white leading-[1.12]">
-              Study resources,<br/>
-              made easier to find.
-            </h2>
-          </div>
-
-          <p class="text-base sm:text-lg text-gray-300 leading-relaxed font-normal">
-            A student-built study-material directory for Don Bosco College, Maram.
-            Browse by department, semester, and subject to find the resources shared
-            for your course.
-          </p>
-          <div class="pt-1">
-            <a href="/about-developers.html" 
-              class="inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 font-semibold text-base transition-all group">
-              <span>About the developers</span>
-              <span class="group-hover:translate-x-1.5 transition-transform text-lg leading-none">&rarr;</span>
-            </a>
-          </div>
-        </div>
-
-      </div>
-
-      <!-- Bottom Cookie / Campus Settings Bar (roadmap.sh style) -->
-      <div class="mt-12 pt-6 border-t border-white/10 flex items-center justify-between flex-wrap gap-4 text-xs text-gray-400">
-        <button onclick="window.scrollTo({ top: 0, behavior: 'smooth' })" 
-          class="px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1.5 text-xs">
-          <i data-lucide="arrow-up" class="w-3.5 h-3.5"></i>
-          <span>Back to Top</span>
-        </button>
-
-        <div class="flex items-center gap-4 text-[11px]">
-          <span class="text-gray-400">Don Bosco College Maram Study Material Portal</span>
-          <span>·</span>
-          <span class="text-gray-400">Powered by DBCM Academic Cell</span>
-        </div>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- ========================================================
-       MODALS
-       ======================================================== -->
-
-  <!-- Subject Detail Modal -->
-  <div id="subject-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-black/75 backdrop-blur-md hidden animate-fade-in">
-    <div class="glass-panel w-full max-w-4xl max-h-[92vh] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl flex flex-col border border-white/20 shadow-2xl overflow-hidden">
-      <!-- Modal Header -->
-      <div class="p-4 sm:p-6 border-b border-white/10 flex items-start justify-between gap-3 sm:gap-4">
-        <div>
-          <div id="modal-subject-track-badge" class="mb-1.5 sm:mb-2"></div>
-          <h2 id="modal-subject-title" class="text-lg sm:text-2xl font-black text-white">Subject Title</h2>
-          <div id="modal-subject-code" class="flex items-center gap-2 mt-1 sm:mt-1.5 flex-wrap"></div>
-        </div>
-        <button onclick="closeSubjectModal()" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer transition-colors shrink-0 min-h-[38px] min-w-[38px] flex items-center justify-center">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <!-- Modal Tabs -->
-      <div id="modal-subject-tabs" class="flex items-center border-b border-white/10 px-4 sm:px-6 overflow-x-auto bg-black/20 touch-scroll-x scrollbar-none">
-        <!-- Populated via JS -->
-      </div>
-
-      <!-- Modal Body -->
-      <div id="modal-subject-body" class="p-4 sm:p-6 overflow-y-auto flex-1">
-        <!-- Populated via JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Document Reader Modal -->
-  <div id="document-reader-modal" class="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/85 backdrop-blur-lg hidden animate-fade-in">
-    <div class="glass-panel w-full max-w-5xl h-[94vh] sm:h-[92vh] rounded-2xl sm:rounded-3xl flex flex-col border border-white/20 shadow-2xl overflow-hidden">
-      <div class="p-3 sm:p-4 px-4 sm:px-6 border-b border-white/10 flex items-center justify-between bg-black/30 gap-2">
-        <h3 id="reader-modal-title" class="text-xs sm:text-sm font-bold text-white truncate max-w-xs sm:max-w-md">Document Reader</h3>
-        <div class="flex items-center gap-2 shrink-0">
-          <button onclick="window.print()" class="px-2.5 sm:px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs text-gray-300 hover:text-white cursor-pointer flex items-center gap-1.5">
-            <i data-lucide="printer" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Print / Save PDF</span>
-          </button>
-          <button onclick="closeReaderModal()" class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white cursor-pointer">
-            <i data-lucide="x" class="w-4 h-4"></i>
-          </button>
-        </div>
-      </div>
-      <div id="reader-modal-content" class="p-4 sm:p-8 overflow-y-auto flex-1 bg-[#0d0d14]">
-        <!-- Document Content -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Bookmarks Drawer -->
-  <div id="bookmarks-drawer" class="fixed inset-0 z-50 flex justify-end bg-black/50 backdrop-blur-sm hidden animate-fade-in">
-    <div class="w-full max-w-md bg-[#12121a] border-l border-white/10 h-full p-6 flex flex-col shadow-2xl">
-      <div class="flex items-center justify-between pb-4 border-b border-white/10">
-        <div class="flex items-center gap-2">
-          <i data-lucide="bookmark" class="w-5 h-5 text-amber-400 fill-amber-400"></i>
-          <h3 class="text-lg font-bold text-white">Saved Materials</h3>
-        </div>
-        <button onclick="closeBookmarksDrawer()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-      <div id="bookmarks-list-container" class="mt-4 flex-1 overflow-y-auto space-y-3">
-        <!-- Populated via JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Announcement Detail Modal (Curriculum Update / Lecture Notes / High-Yield IMPs) -->
-  <div id="announcement-detail-modal" class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md hidden animate-fade-in" onclick="if(event.target===this) closeAnnouncementModal()">
-    <div class="glass-panel w-full max-w-2xl max-h-[92vh] sm:max-h-[90vh] rounded-2xl sm:rounded-3xl flex flex-col border border-white/20 shadow-2xl overflow-hidden">
-      <!-- Modal Header -->
-      <div class="p-4 sm:p-5 border-b border-white/10 flex items-start justify-between gap-3 bg-black/20">
-        <div class="flex items-center gap-3">
-          <div id="announcement-modal-icon-container" class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border">
-            <i id="announcement-modal-icon" data-lucide="layers" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <div id="announcement-modal-badge" class="mb-1"></div>
-            <h3 id="announcement-modal-title" class="text-base sm:text-lg font-black text-white">Announcement Details</h3>
-          </div>
-        </div>
-        <button onclick="closeAnnouncementModal()" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer transition-colors shrink-0">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <!-- Modal Body -->
-      <div id="announcement-modal-body" class="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4">
-        <!-- Injected via JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- Search Modal (Ctrl+K) -->
-  <div id="search-modal" class="fixed inset-0 z-50 flex items-start justify-center pt-20 p-4 bg-black/75 backdrop-blur-md hidden animate-fade-in">
-    <div class="glass-panel w-full max-w-2xl rounded-2xl border border-white/20 shadow-2xl overflow-hidden">
-      <div class="p-4 border-b border-white/10 flex items-center gap-3 group focus-within:border-indigo-500/50 transition-colors">
-        <i data-lucide="search" class="w-5 h-5 text-gray-400 group-hover:text-indigo-400 group-focus-within:text-indigo-400 transition-colors"></i>
-        <input type="text" id="modal-search-input" 
-          placeholder="Search DBCM subjects, units, notes, or question banks across all 14 departments..."
-          class="flex-1 bg-transparent text-sm text-white placeholder-gray-500 focus:outline-none"
-        />
-        <button onclick="closeSearchModal()" class="text-xs px-2 py-1 rounded bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white cursor-pointer transition-colors">
-          ESC
-        </button>
-      </div>
-      <div id="modal-search-results" class="p-4 max-h-[60vh] overflow-y-auto">
-        <p class="text-sm text-gray-500 py-6 text-center">Type to search subjects, notes, or question banks...</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Student Login & Profile Modal -->
-  <div id="student-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-md hidden animate-fade-in">
-    <div class="glass-panel w-full max-w-md rounded-3xl border border-white/20 shadow-2xl overflow-hidden p-6">
-      
-      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center">
-            <i data-lucide="user" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-white">Student Portal</h3>
-            <p class="text-xs text-gray-400">DBCM Academic Access</p>
-          </div>
-        </div>
-        <button onclick="closeStudentModal()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- State: Logged In View -->
-      <div id="student-profile-view" class="hidden space-y-4">
-        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs text-gray-400">Logged in as:</span>
-            <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-500/20 text-emerald-400">Enrolled Student</span>
-          </div>
-          <h4 id="student-display-name" class="text-lg font-bold text-white">Student Name</h4>
-          <div class="flex items-center gap-2 text-xs text-gray-300 flex-wrap">
-            <span id="student-display-dept" class="font-mono bg-white/10 px-2 py-0.5 rounded">Computer Science (BCA)</span>
-            <span id="student-display-track" class="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded">Major</span>
-            <span id="student-display-sem">• Sem 1</span>
-          </div>
-        </div>
-
-        <div class="space-y-2">
-          <button onclick="closeStudentModal(); openBookmarksDrawer();" class="w-full py-2.5 px-4 rounded-xl bg-indigo-600/20 hover:bg-indigo-600 border border-indigo-500/30 text-indigo-300 hover:text-white text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer">
-            <i data-lucide="bookmark" class="w-4 h-4"></i> View Saved Bookmarks
-          </button>
-          <button onclick="studentLogout()" class="w-full py-2.5 px-4 rounded-xl bg-white/5 hover:bg-red-500/20 border border-white/10 hover:border-red-500/30 text-gray-300 hover:text-red-400 text-xs font-semibold flex items-center justify-center gap-2 transition-all cursor-pointer">
-            <i data-lucide="log-out" class="w-4 h-4"></i> Log Out
-          </button>
-        </div>
-      </div>
-
-      <!-- State: Login Form -->
-      <form id="student-login-form" onsubmit="handleStudentLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Student Name / Roll Number</label>
-          <input type="text" id="student-name-input" required placeholder="e.g. Rahul Sharma or DBCM2024CS042"
-            class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors" />
-        </div>
-
-        <div>
-          <label class="block text-xs font-semibold text-gray-300 mb-1.5">Academic Department</label>
-          <select id="student-dept-select" class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500">
-            <option value="bca">1. Computer Science (BCA)</option>
-            <option value="botany">2. Botany</option>
-            <option value="chemistry">3. Chemistry</option>
-            <option value="physics">4. Physics</option>
-            <option value="zoology">5. Zoology</option>
-            <option value="biotech">6. Biotechnology (BBT)</option>
-            <option value="commerce">7. Commerce (B.Com)</option>
-            <option value="economics">8. Economics</option>
-            <option value="education">9. Education</option>
-            <option value="english">10. English</option>
-            <option value="history">11. History</option>
-            <option value="polsci">12. Political Science</option>
-            <option value="sociology">13. Sociology</option>
-            <option value="bsw">14. Social Work (BSW)</option>
-          </select>
-        </div>
-
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Track / Stream</label>
-            <select id="student-track-select" class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500">
-              <option value="major" selected>Major (Core Degree)</option>
-              <option value="minor">Minor (Elective)</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Current Semester</label>
-            <select id="student-semester-select" class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white focus:outline-none focus:border-blue-500">
-              <option value="1" selected>Sem 1 (1Y)</option>
-              <option value="2">Sem 2 (1Y)</option>
-              <option value="3">Sem 3 (2Y)</option>
-              <option value="4">Sem 4 (2Y)</option>
-              <option value="5">Sem 5 (3Y)</option>
-              <option value="6">Sem 6 (3Y)</option>
-              <option value="7">Sem 7 (4Y)</option>
-              <option value="8">Sem 8 (4Y)</option>
-            </select>
-          </div>
-        </div>
-
-        <button type="submit" class="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-500/25 transition-all cursor-pointer flex items-center justify-center gap-2">
-          <i data-lucide="check-circle" class="w-4 h-4"></i> Enter Student Portal
-        </button>
-      </form>
-    </div>
-  </div>
-
-  <!-- Admin Management Modal (Login + Upload Material + Add Subject + Site Updation) -->
-  <div id="admin-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden animate-fade-in">
-    <div class="glass-panel w-full max-w-2xl max-h-[92vh] rounded-3xl border border-white/20 shadow-2xl overflow-hidden flex flex-col">
-      
-      <!-- Admin Modal Header -->
-      <div class="p-5 border-b border-white/10 flex items-center justify-between bg-black/20">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
-            <i data-lucide="shield-alert" class="w-5 h-5"></i>
-          </div>
-          <div>
-            <h3 class="text-base font-bold text-white flex items-center gap-2">
-              DBCM Admin Portal
-              <span id="admin-status-badge" class="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-gray-500/20 text-gray-400">Authentication Required</span>
-            </h3>
-            <p class="text-xs text-gray-400">Upload study materials, manage syllabus, and update announcements across all 14 departments</p>
-          </div>
-        </div>
-        <button onclick="closeAdminModal()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
-          <i data-lucide="x" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- State 1: Admin Login Screen -->
-      <div id="admin-login-view" class="p-6 space-y-4">
-        <div class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
-          <strong>Default Admin Credentials:</strong> Username: <code class="bg-black/30 px-1.5 py-0.5 rounded text-amber-300 font-mono">admin</code> | Password: <code class="bg-black/30 px-1.5 py-0.5 rounded text-amber-300 font-mono">admin123</code>
-        </div>
-
-        <form id="admin-login-form" onsubmit="handleAdminLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Admin Username</label>
-            <input type="text" id="admin-username-input" value="admin" required
-              class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-amber-500" />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-gray-300 mb-1.5">Admin Password</label>
-            <input type="password" id="admin-password-input" value="admin123" required
-              class="w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/15 text-sm text-white focus:outline-none focus:border-amber-500" />
-          </div>
-
-          <div id="admin-login-error" class="hidden text-xs text-red-400 font-medium bg-red-500/10 border border-red-500/20 p-2.5 rounded-xl"></div>
-
-          <button type="submit" class="w-full py-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs shadow-lg shadow-amber-500/25 transition-all cursor-pointer flex items-center justify-center gap-2">
-            <i data-lucide="lock" class="w-4 h-4"></i> Sign In to DBCM Admin Console
-          </button>
-        </form>
-      </div>
-
-      <!-- State 2: Admin Dashboard Tabs (When authenticated) -->
-      <div id="admin-dashboard-view" class="hidden flex-1 flex flex-col overflow-hidden">
-        
-        <!-- Navigation Subtabs -->
-        <div class="flex items-center border-b border-white/10 px-6 bg-black/10 gap-4 overflow-x-auto">
-          <button onclick="switchAdminTab('upload')" id="adm-tab-upload"
-            class="py-3 text-xs font-bold border-b-2 border-amber-400 text-amber-300 flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap">
-            <i data-lucide="upload-cloud" class="w-4 h-4"></i> Upload Material
-          </button>
-          <button onclick="switchAdminTab('subject')" id="adm-tab-subject"
-            class="py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-white flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap">
-            <i data-lucide="plus-circle" class="w-4 h-4"></i> Add Subject
-          </button>
-          <button onclick="switchAdminTab('announcement')" id="adm-tab-announcement"
-            class="py-3 text-xs font-medium border-b-2 border-transparent text-gray-400 hover:text-white flex items-center gap-2 cursor-pointer transition-colors whitespace-nowrap">
-            <i data-lucide="megaphone" class="w-4 h-4"></i> Site Updation
-          </button>
-          <div class="ml-auto py-2">
-            <button onclick="adminLogout()" class="px-2.5 py-1 text-xs rounded-lg bg-red-500/20 hover:bg-red-500 text-red-300 hover:text-white transition-colors cursor-pointer flex items-center gap-1 font-medium">
-              <i data-lucide="log-out" class="w-3.5 h-3.5"></i> Logout
-            </button>
-          </div>
-        </div>
-
-        <!-- Admin Content Panels -->
-        <div class="p-6 overflow-y-auto flex-1 space-y-6">
-          
-          <!-- TAB 1: Upload Material -->
-          <div id="adm-panel-upload" class="space-y-4">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Add Material to DBCM Subject</h4>
-            
-            <form id="admin-material-form" onsubmit="handleUploadMaterial(event)" class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Select DBCM Subject</label>
-                <select id="adm-mat-subject" required class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white">
-                  <!-- Populated via JS -->
-                </select>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Material Category</label>
-                <select id="adm-mat-type" onchange="handleMaterialTypeChange()" class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white">
-                  <option value="note">Lecture Notes (PDF summary / full module)</option>
-                  <option value="imp">High-Yield IMP Exam Question</option>
-                  <option value="pyq">Previous Year Exam Paper (PYQ)</option>
-                </select>
-              </div>
-
-              <!-- Note Specific Inputs -->
-              <div id="adm-note-fields" class="space-y-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Notes Title</label>
-                  <input type="text" id="adm-note-title" placeholder="e.g. Unit 3 Trees & Graphs Comprehensive Notes"
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Estimated Pages</label>
-                    <input type="number" id="adm-note-pages" value="28" min="1"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Author / Faculty</label>
-                    <input type="text" id="adm-note-author" value="DBCM Academic Faculty"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                </div>
-              </div>
-
-              <!-- IMP Specific Inputs -->
-              <div id="adm-imp-fields" class="hidden space-y-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Question Text</label>
-                  <textarea id="adm-imp-question" rows="2" placeholder="e.g. Explain Dijkstra algorithm with time complexity and step-by-step example."
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white"></textarea>
-                </div>
-                <div class="grid grid-cols-3 gap-3">
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Module #</label>
-                    <input type="number" id="adm-imp-module" value="1" min="1" max="6"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Marks</label>
-                    <input type="number" id="adm-imp-marks" value="10" min="2" max="20"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Exam Frequency</label>
-                    <input type="text" id="adm-imp-freq" value="Asked 4 Times (High Yield)"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Answer Summary / Faculty Hint</label>
-                  <textarea id="adm-imp-hint" rows="2" placeholder="Key points student must mention for full marks..."
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white"></textarea>
-                </div>
-              </div>
-
-              <!-- PYQ Specific Inputs -->
-              <div id="adm-pyq-fields" class="hidden space-y-3">
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Exam Term / Year</label>
-                    <input type="text" id="adm-pyq-year" value="May / June 2024"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                  <div>
-                    <label class="block text-xs font-semibold text-gray-300 mb-1">Paper Type</label>
-                    <input type="text" id="adm-pyq-paper" value="DBCM End-Semester Exam"
-                      class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                  </div>
-                </div>
-              </div>
-
-              <button type="submit" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2">
-                <i data-lucide="upload" class="w-4 h-4"></i> Upload & Publish to Portal
-              </button>
-            </form>
-          </div>
-
-          <!-- TAB 2: Add New Subject -->
-          <div id="adm-panel-subject" class="hidden space-y-4">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Add New DBCM Subject (14 Departments)</h4>
-            
-            <form id="admin-subject-form" onsubmit="handleCreateSubject(event)" class="space-y-3">
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Subject Code</label>
-                  <input type="text" id="adm-sub-code" required placeholder="e.g. BCA301 or BOT201"
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Short Name</label>
-                  <input type="text" id="adm-sub-short" required placeholder="e.g. DBMS or Botany I"
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-300 mb-1">Full Subject Title</label>
-                <input type="text" id="adm-sub-name" required placeholder="e.g. Database Management Systems"
-                  class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-              </div>
-
-              <div class="grid grid-cols-3 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Department</label>
-                  <select id="adm-sub-dept" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white">
-                    <option value="bca">1. Computer Science (BCA)</option>
-                    <option value="botany">2. Botany</option>
-                    <option value="chemistry">3. Chemistry</option>
-                    <option value="physics">4. Physics</option>
-                    <option value="zoology">5. Zoology</option>
-                    <option value="biotech">6. Biotechnology (BBT)</option>
-                    <option value="commerce">7. Commerce (B.Com)</option>
-                    <option value="economics">8. Economics</option>
-                    <option value="education">9. Education</option>
-                    <option value="english">10. English</option>
-                    <option value="history">11. History</option>
-                    <option value="polsci">12. Political Science</option>
-                    <option value="sociology">13. Sociology</option>
-                    <option value="bsw">14. Social Work (BSW)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Track</label>
-                  <select id="adm-sub-track" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white">
-                    <option value="major" selected>Major (Core Degree)</option>
-                    <option value="minor">Minor (Elective)</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Semester</label>
-                  <select id="adm-sub-sem" class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white">
-                    <option value="1">Sem 1</option>
-                    <option value="2">Sem 2</option>
-                    <option value="3">Sem 3</option>
-                    <option value="4" selected>Sem 4</option>
-                    <option value="5">Sem 5</option>
-                    <option value="6">Sem 6</option>
-                    <option value="7">Sem 7</option>
-                    <option value="8">Sem 8</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="grid grid-cols-2 gap-3">
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Credits</label>
-                  <input type="number" id="adm-sub-credits" value="4" min="1" max="6"
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-gray-300 mb-1">Passing Probability</label>
-                  <input type="text" id="adm-sub-passing" value="92%+"
-                    class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white" />
-                </div>
-              </div>
-
-              <div>
-                <label class="block text-xs font-semibold text-gray-300 mb-1">Description / Syllabus Overview</label>
-                <textarea id="adm-sub-desc" rows="2" placeholder="Concise overview of what this subject covers..."
-                  class="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/15 text-xs text-white"></textarea>
-              </div>
-
-              <button type="submit" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2">
-                <i data-lucide="plus-circle" class="w-4 h-4"></i> Create & Publish DBCM Subject
-              </button>
-            </form>
-          </div>
-
-          <!-- TAB 3: Site Announcement & Banner Updation -->
-          <div id="adm-panel-announcement" class="hidden space-y-4">
-            <h4 class="text-xs font-bold uppercase tracking-wider text-gray-400">Update Website Announcement Banner</h4>
-            <p class="text-xs text-gray-400">This banner appears prominently at the very top of DBCM Study Material for all students.</p>
-
-            <form id="admin-announcement-form" onsubmit="handleUpdateAnnouncement(event)" class="space-y-4">
-              <div>
-                <label class="block text-xs font-semibold text-gray-300 mb-1.5">Announcement Text</label>
-                <textarea id="adm-announcement-input" rows="3" required
-                  class="w-full px-3 py-2.5 rounded-xl bg-white/5 border border-white/15 text-xs text-white"></textarea>
-              </div>
-
-              <button type="submit" class="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-2">
-                <i data-lucide="send" class="w-4 h-4"></i> Broadcast Announcement to Website
-              </button>
-            </form>
-          </div>
-
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Application Script (Relative path for compatibility with both Node.js server and VS Code Live Server) -->
-  <script src="js/app.js"></script>
+  <footer class="site-footer page-width">
+    <span>Don Bosco College, Maram</span>
+    <div class="footer-links"><a href="/about-developers">About the developers</a><a href="https://dbcmaram.ac.in" target="_blank" rel="noopener noreferrer">College website ↗</a></div>
+  </footer>
+  <script src="js/app.js" defer></script>
 </body>
 </html>

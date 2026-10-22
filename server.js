@@ -1,43 +1,77 @@
 const express = require('express');
-const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const adminSessions = new Map();
+const loginAttempts = new Map();
+const SESSION_TTL_MS = 8 * 60 * 60 * 1000;
 
-app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+function safeEqual(left, right) {
+  const leftBuffer = Buffer.from(String(left || ''));
+  const rightBuffer = Buffer.from(String(right || ''));
+  return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
+}
+
+function cleanText(value, maxLength) {
+  return String(value || '').replace(/[<>"'`]/g, '').trim().slice(0, maxLength);
+}
+
+function getSessionToken(req) {
+  const cookie = (req.headers.cookie || '').split(';').map(part => part.trim())
+    .find(part => part.startsWith('dbcm_admin_session='));
+  if (!cookie) return '';
+  try {
+    return decodeURIComponent(cookie.slice('dbcm_admin_session='.length));
+  } catch (_) {
+    return '';
+  }
+}
+
+function setSessionCookie(res, token, maxAgeSeconds) {
+  const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `dbcm_admin_session=${encodeURIComponent(token)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAgeSeconds}${secure}`);
+}
+
+function requireAdmin(req, res, next) {
+  const token = getSessionToken(req);
+  const session = adminSessions.get(token);
+  if (!session || session.expiresAt <= Date.now()) {
+    if (token) adminSessions.delete(token);
+    return res.status(401).json({ success: false, message: 'Administrator sign-in required.' });
+  }
+  session.expiresAt = Date.now() + SESSION_TTL_MS;
+  next();
+}
+
+app.use(express.json({ limit: '22mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use((req, res, next) => {
+  if (!req.body || typeof req.body !== 'object' || Array.isArray(req.body)) req.body = {};
+  next();
+});
 
 // Ensure upload directory exists for PDFs and documents
-const uploadDir = path.join(__dirname, 'public', 'uploads');
+const uploadDir = process.env.UPLOAD_DIR || path.join(__dirname, 'public', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Helper to save base64 encoded document to public/uploads
+// Accept only small, well-formed PDF data and use a generated storage name.
 function saveBase64File(fileData, originalFileName) {
   if (!fileData || typeof fileData !== 'string') return null;
-  try {
-    const matches = fileData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-    let buffer;
-    if (matches && matches.length === 3) {
-      buffer = Buffer.from(matches[2], 'base64');
-    } else {
-      buffer = Buffer.from(fileData, 'base64');
-    }
-    const ext = path.extname(originalFileName || '') || '.pdf';
-    const safeBase = (path.basename(originalFileName || 'document', ext)).replace(/[^a-zA-Z0-9_-]/g, '_');
-    const uniqueFilename = `${Date.now()}_${safeBase}${ext}`;
-    const targetPath = path.join(uploadDir, uniqueFilename);
-    fs.writeFileSync(targetPath, buffer);
-    console.log(`[File Upload] Successfully saved file to ${uniqueFilename} (${buffer.length} bytes)`);
-    return `/uploads/${uniqueFilename}`;
-  } catch (err) {
-    console.error('[Upload Error] Failed to save base64 file:', err.message);
-    return null;
-  }
+  const matches = fileData.match(/^data:application\/pdf;base64,([A-Za-z0-9+/=]+)$/);
+  const encoded = matches ? matches[1] : fileData;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded)) return null;
+  const buffer = Buffer.from(encoded, 'base64');
+  if (buffer.length === 0 || buffer.length > 15 * 1024 * 1024 || buffer.subarray(0, 5).toString() !== '%PDF-') return null;
+  const safeBase = path.basename(originalFileName || 'document', path.extname(originalFileName || '')).replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 80) || 'document';
+  const uniqueFilename = `${Date.now()}_${crypto.randomBytes(6).toString('hex')}_${safeBase}.pdf`;
+  const targetPath = path.join(uploadDir, uniqueFilename);
+  fs.writeFileSync(targetPath, buffer, { flag: 'wx' });
+  return `/uploads/${uniqueFilename}`;
 }
 
 // Disable caching on API endpoints so refresh always returns real-time data
@@ -48,10 +82,12 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
+app.use('/uploads', express.static(uploadDir));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Load curriculum data
-const dataFilePath = path.join(__dirname, 'data', 'curriculum.json');
+const dataFilePath = process.env.CURRICULUM_FILE || path.join(__dirname, 'data', 'curriculum.json');
+const publicDataFilePath = path.join(__dirname, 'public', 'data', 'curriculum.json');
 let rawData = { institution: null, departments: [], semesters: [], subjects: [] };
 
 try {
@@ -71,8 +107,8 @@ const dbcmInstitution = rawData.institution || {
   location: "DBCM Academic Campus",
   icon: "graduation-cap",
   schemes: ["DBCM Autonomous NEP 2024", "Major-Minor Degree Framework", "CBCS Undergraduate"],
-  totalStudents: "25,000+ Enrolled Students",
-  rating: 4.96
+  totalStudents: null,
+  rating: null
 };
 
 // 14 Official Departments
@@ -104,45 +140,89 @@ const defaultSemesters = rawData.semesters && rawData.semesters.length > 0 ? raw
   { number: 8, year: "4Y", label: "Sem 8 (4Y)" }
 ];
 
-// Site Announcement (Admin can update this)
-let siteAnnouncement = "🔥 DBCM Semester Exam Prep Portal Active — Select your Department, choose Major or Minor, and access Notes, IMP Questions & PYQs.";
-
-// Academic Announcement Notices (Curriculum Update, Lecture Notes, High-Yield IMPs)
-let academicNotices = (rawData && rawData.academicNotices && rawData.academicNotices.length > 0) ? rawData.academicNotices : [
-  {
-    id: 'curriculum',
-    badge: 'Curriculum Update',
-    badgeClass: 'bg-blue-500/15 text-blue-400 border-blue-500/30',
-    icon: 'layers',
-    title: 'NEP 2024–25 Major & Minor Curricula Live',
-    desc: 'All 14 DBCM academic departments updated with complete syllabus units, credit weightages, and notes for 1Y, 2Y, 3Y, and 4Y.'
-  },
-  {
-    id: 'notes',
-    badge: 'Lecture Notes',
-    badgeClass: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-    icon: 'file-text',
-    title: 'Comprehensive Study Modules & Unit Notes',
-    desc: 'Verified chapter-wise reference notes, lecture presentations, and faculty handouts available for all 14 departments.'
-  },
-  {
-    id: 'imps',
-    badge: 'High-Yield IMPs',
-    badgeClass: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-    icon: 'flame',
-    title: 'Question Banks with Faculty Hints Active',
-    desc: 'Explore unit-wise repeated questions with marks breakdown and solution hints to optimize exam performance.'
-  }
-];
+if (!Array.isArray(rawData.notices)) rawData.notices = [];
 
 // Helper to save data back to file
 function persistCurriculum() {
+  const targets = process.env.CURRICULUM_FILE ? [dataFilePath] : [dataFilePath, publicDataFilePath];
+  const temporaryFiles = [];
   try {
-    fs.writeFileSync(dataFilePath, JSON.stringify(rawData, null, 2));
+    const serialized = `${JSON.stringify(rawData, null, 2)}\n`;
+    for (const target of targets) {
+      const temporaryPath = `${target}.${process.pid}.tmp`;
+      fs.writeFileSync(temporaryPath, serialized);
+      temporaryFiles.push({ temporaryPath, target });
+    }
+    for (const file of temporaryFiles) fs.renameSync(file.temporaryPath, file.target);
     console.log('[Data Saved] Successfully persisted curriculum to disk.');
+    return true;
   } catch (err) {
+    for (const file of temporaryFiles) {
+      removeStoredFile(file.temporaryPath);
+    }
     console.error('[Data Error] Failed to persist curriculum:', err);
+    return false;
   }
+}
+
+function getStoredUploadPath(url) {
+  if (typeof url !== 'string' || !url.startsWith('/uploads/')) return null;
+  const root = path.resolve(uploadDir) + path.sep;
+  const filename = url.slice('/uploads/'.length);
+  if (!filename || filename !== path.basename(filename)) return null;
+  const filePath = path.resolve(uploadDir, filename);
+  return filePath.startsWith(root) && fs.existsSync(filePath) && fs.statSync(filePath).isFile() ? filePath : null;
+}
+
+function removeStoredFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return true;
+  try {
+    fs.unlinkSync(filePath);
+    return true;
+  } catch (error) {
+    console.error('[Storage Error] Could not remove stored file:', error.message);
+    return false;
+  }
+}
+
+function isValidLectureUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === 'https:' && !['youtube.com', 'www.youtube.com', 'youtu.be'].includes(url.hostname) ? true :
+      url.protocol === 'https:' && (url.hostname === 'youtu.be' ? url.pathname.length > 1 : url.hostname.endsWith('youtube.com') && url.pathname !== '/');
+  } catch (_) {
+    return false;
+  }
+}
+
+function getSubjectResourceRecords(subject) {
+  const records = [];
+  const add = (resource, category, legacy = false) => {
+    const url = resource.fileUrl || resource.pdfUrl || resource.syllabusPdfUrl;
+    if (!url) return;
+    records.push({
+      id: resource.id || `legacy-${subject.id}-${records.length}`,
+      subjectId: subject.id,
+      subjectCode: subject.code,
+      subjectName: subject.name,
+      departmentId: subject.departmentId,
+      semester: subject.semester,
+      category,
+      title: resource.title || resource.fileName || subject.name,
+      description: resource.description || '',
+      fileName: resource.fileName || path.basename(url),
+      fileSize: resource.fileSize || '',
+      url,
+      available: !!getStoredUploadPath(url),
+      legacy
+    });
+  };
+
+  (subject.resources || []).forEach(resource => add(resource, resource.category || 'pdf'));
+  if (subject.syllabusPdfUrl) add({ id: `syllabus-${subject.id}`, title: `${subject.code} Syllabus`, fileName: subject.syllabusFileName, fileSize: subject.syllabusFileSize, pdfUrl: subject.syllabusPdfUrl }, 'pdf', true);
+  (subject.notes || []).forEach(resource => add(resource, 'notes', true));
+  (subject.pyqs || []).forEach(resource => add(resource, 'pyqs', true));
+  return records;
 }
 
 // Subject normalizer
@@ -150,47 +230,17 @@ function normalizeSubject(s) {
   const deptId = s.departmentId || s.branchId || (Array.isArray(s.branches) ? s.branches[0] : 'bca');
   const track = (s.track || 'major').toLowerCase();
 
-  let imps = s.impQuestions || [];
-  if (imps.length === 0 && s.modules) {
-    imps = s.modules.flatMap(m => (m.impQuestions || []).map(q => ({
-      id: q.id || `q-${Math.random().toString(36).substr(2, 6)}`,
-      module: q.module || m.moduleNumber || m.num || 1,
-      marks: q.marks || 10,
-      frequency: q.frequency || q.examFrequency || "DBCM Exam Paper",
-      question: q.question,
-      answerHint: q.answerHint || q.modelAnswerSummary || "Refer to standard DBCM lecture notes and syllabus."
-    })));
-  }
+  const imps = (s.impQuestions || []).filter(question => typeof question.question === 'string' && question.question.trim());
+  const lectures = [...(s.lectures || []), ...(s.videos || [])].filter(lecture => isValidLectureUrl(lecture.url));
+  const notes = (s.notes || []).filter(note => getStoredUploadPath(note.pdfUrl || note.fileUrl));
+  const pyqs = (s.pyqs || []).filter(paper => getStoredUploadPath(paper.pdfUrl || paper.fileUrl));
 
-  const videos = (s.videos && s.videos.length > 0) ? s.videos : [
-    { channel: "DBCM Faculty Lectures", title: `${s.name} Complete Video Lectures`, url: "https://www.youtube.com", count: 24 },
-    { channel: "Academic Masterclass", title: `${s.name} Comprehensive Review`, url: "https://www.youtube.com", count: 16 }
-  ];
-
-  const notes = (s.notes && s.notes.length > 0) ? s.notes : [
-    { id: `n-${s.id}-1`, title: `${s.name} - Complete DBCM Department Notes`, pages: 58, author: "DBCM Academic Faculty", reads: 14200 },
-    { id: `n-${s.id}-2`, title: `${s.name} - Unit Summaries & Quick Revision Guide`, pages: 22, author: "DBCM Subject Cell", reads: 9800 }
-  ];
-
-  const pyqs = (s.pyqs && s.pyqs.length > 0) ? s.pyqs : [
-    { year: "May / June 2024", session: "Summer 2024", pages: 4, paperType: `DBCM End-Semester Exam (${track.toUpperCase()})`, totalMarks: 80 },
-    { year: "Nov / Dec 2023", session: "Winter 2023", pages: 4, paperType: `DBCM End-Semester Exam (${track.toUpperCase()})`, totalMarks: 80 },
-    { year: "May / June 2023", session: "Summer 2023", pages: 4, paperType: `DBCM End-Semester Exam (${track.toUpperCase()})`, totalMarks: 80 }
-  ];
-
-  const modules = (s.modules && s.modules.length > 0) ? s.modules.map((m, idx) => ({
+  const modules = (s.modules || []).map((m, idx) => ({
     num: m.num || m.moduleNumber || (idx + 1),
-    title: m.title || `Module ${idx + 1}`,
-    weightage: m.weightage || "~14 Marks",
-    summary: m.summary || `Syllabus topics for Module ${idx + 1}.`
-  })) : [
-    { num: 1, title: "Foundations & Core Principles", weightage: "14 Marks", summary: "Theoretical foundations, definitions, and classifications." },
-    { num: 2, title: "Governing Models & Architecture", weightage: "16 Marks", summary: "Structural methodologies and standard diagrams." },
-    { num: 3, title: "Advanced Implementations", weightage: "18 Marks", summary: "Design paradigms, algorithms, and technical use cases." },
-    { num: 4, title: "Applied Problem Solving", weightage: "16 Marks", summary: "Analytical problems, derivations, and proofs." },
-    { num: 5, title: "System Protocols & Standards", weightage: "14 Marks", summary: "Operational interfaces and best practices." },
-    { num: 6, title: "Modern Trends & Case Studies", weightage: "12 Marks", summary: "Contemporary innovations and case studies." }
-  ];
+    title: m.title || '',
+    weightage: m.weightage || '',
+    summary: m.summary || ''
+  }));
 
   return {
     id: s.id || `${s.code.toLowerCase().replace(/[^a-z0-9]/g, '')}-${(s.shortName || 'sub').toLowerCase().replace(/[^a-z0-9]/g, '')}`,
@@ -207,7 +257,7 @@ function normalizeSubject(s) {
     scheme: s.scheme || `DBCM Autonomous NEP 2024 (${track.toUpperCase()})`,
     difficulty: s.difficulty || (track === 'major' ? "Core Major" : "Interdisciplinary Minor"),
     passingProbability: s.passingProbability || "90%+",
-    description: s.description || `${s.name} for DBCM undergraduate program.`,
+    description: s.description || '',
     syllabusPdfUrl: s.syllabusPdfUrl || null,
     syllabusFileName: s.syllabusFileName || null,
     syllabusFileSize: s.syllabusFileSize || null,
@@ -215,7 +265,9 @@ function normalizeSubject(s) {
     impQuestions: imps,
     notes: notes,
     pyqs: pyqs,
-    videos: videos
+    lectures,
+    resources: s.resources || [],
+    resourceRecords: getSubjectResourceRecords({ ...s, id: s.id, departmentId: deptId })
   };
 }
 
@@ -291,77 +343,73 @@ app.get('/api/subjects', (req, res) => {
   res.json({ success: true, count: results.length, data: results });
 });
 
-// 5. Dedicated PYQ Endpoint (Across all 14 departments)
+function getRawSubject(subjectId) {
+  return (rawData.subjects || []).find(subject => subject.id === subjectId || subject.code.toLowerCase() === String(subjectId).toLowerCase());
+}
+
+function getAllResourceRecords() {
+  const records = (rawData.subjects || []).flatMap(subject => getSubjectResourceRecords(subject));
+  return [...new Map(records.map(record => [`${record.subjectId}:${record.id}`, record])).values()];
+}
+
+function getAllLectureRecords() {
+  return (rawData.subjects || []).flatMap(subject => {
+    const lectures = [...(subject.lectures || []), ...(subject.videos || []).filter(lecture => isValidLectureUrl(lecture.url))];
+    const seen = new Set();
+    return lectures.filter(lecture => {
+      if (!isValidLectureUrl(lecture.url)) return false;
+      const key = lecture.id || lecture.url;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).map(lecture => ({
+      id: lecture.id || `legacy-${subject.id}-${Buffer.from(lecture.url).toString('hex').slice(0, 16)}`,
+      subjectId: subject.id,
+      subjectCode: subject.code,
+      subjectName: subject.name,
+      departmentId: subject.departmentId || subject.branchId,
+      semester: subject.semester,
+      title: lecture.title || '',
+      description: lecture.description || '',
+      lecturer: lecture.lecturer || lecture.channel || '',
+      url: lecture.url
+    }));
+  });
+}
+
+function filterByCourse(records, query) {
+  const { department, semester, subjectId, search } = query;
+  return records.filter(record => {
+    if (department && record.departmentId !== department) return false;
+    if (semester && String(record.semester) !== String(semester)) return false;
+    if (subjectId && record.subjectId !== subjectId) return false;
+    if (search) {
+      const text = `${record.title} ${record.description} ${record.subjectName} ${record.subjectCode}`.toLowerCase();
+      if (!text.includes(String(search).toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+app.get('/api/resources', (req, res) => {
+  const data = filterByCourse(getAllResourceRecords().filter(resource => resource.available), req.query);
+  const category = req.query.category;
+  const filtered = category ? data.filter(resource => resource.category === category) : data;
+  res.json({ success: true, count: filtered.length, data: filtered });
+});
+
+app.get('/api/lectures', (req, res) => {
+  const data = filterByCourse(getAllLectureRecords(), req.query);
+  res.json({ success: true, count: data.length, data });
+});
+
+app.get('/api/notices', (req, res) => {
+  res.json({ success: true, count: rawData.notices.length, data: rawData.notices });
+});
+
 app.get('/api/pyqs', (req, res) => {
-  const { department, track, semester, year, search } = req.query;
-  const depts = rawData.departments && rawData.departments.length > 0 ? rawData.departments : defaultDepartments;
-  
-  let allPyqs = [];
-  
-  for (const s of normalizedSubjects) {
-    const deptObj = depts.find(d => d.id === s.departmentId) || { name: s.departmentId, code: s.departmentId.toUpperCase() };
-    for (const p of s.pyqs) {
-      allPyqs.push({
-        id: `pyq-${s.id}-${p.session.toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-        subjectId: s.id,
-        subjectCode: s.code,
-        subjectName: s.name,
-        shortName: s.shortName,
-        departmentId: s.departmentId,
-        departmentName: deptObj.name,
-        departmentCode: deptObj.code,
-        track: s.track,
-        semester: s.semester,
-        year: p.year,
-        session: p.session,
-        paperType: p.paperType,
-        totalMarks: p.totalMarks || 80,
-        pages: p.pages || 4,
-        duration: '3 Hours',
-        scheme: s.scheme,
-        modules: s.modules,
-        impQuestions: s.impQuestions
-      });
-    }
-  }
-
-  // Filter by department
-  if (department && department !== 'all') {
-    allPyqs = allPyqs.filter(p => p.departmentId === department.toLowerCase());
-  }
-
-  // Filter by track
-  if (track && track !== 'all') {
-    allPyqs = allPyqs.filter(p => (p.track || 'major').toLowerCase() === track.toLowerCase());
-  }
-
-  // Filter by semester
-  if (semester && semester !== 'all') {
-    const semNum = parseInt(semester, 10);
-    if (!isNaN(semNum)) {
-      allPyqs = allPyqs.filter(p => p.semester === semNum);
-    }
-  }
-
-  // Filter by year
-  if (year && year !== 'all') {
-    const y = year.toLowerCase();
-    allPyqs = allPyqs.filter(p => p.year.toLowerCase().includes(y) || p.session.toLowerCase().includes(y));
-  }
-
-  // Filter by search query
-  if (search && search.trim() !== '') {
-    const q = search.toLowerCase().trim();
-    allPyqs = allPyqs.filter(p =>
-      p.subjectName.toLowerCase().includes(q) ||
-      p.subjectCode.toLowerCase().includes(q) ||
-      p.departmentName.toLowerCase().includes(q) ||
-      p.year.toLowerCase().includes(q) ||
-      p.paperType.toLowerCase().includes(q)
-    );
-  }
-
-  res.json({ success: true, count: allPyqs.length, data: allPyqs });
+  const data = filterByCourse(getAllResourceRecords(), req.query).filter(resource => resource.category === 'pyqs');
+  res.json({ success: true, count: data.length, data });
 });
 
 // 6. Subject Detail
@@ -377,13 +425,10 @@ app.get('/api/subject/:id', (req, res) => {
 app.get('/api/search', (req, res) => {
   const query = (req.query.q || '').toLowerCase().trim();
   if (!query) {
-    return res.json({ success: true, data: { subjects: [], impQuestions: [], notes: [] } });
+    return res.json({ success: true, data: { subjects: [], resources: [], lectures: [] } });
   }
 
   const matchedSubjects = [];
-  const matchedIMPs = [];
-  const matchedNotes = [];
-
   for (const s of normalizedSubjects) {
     if (s.name.toLowerCase().includes(query) || s.code.toLowerCase().includes(query) || s.shortName.toLowerCase().includes(query)) {
       matchedSubjects.push({
@@ -396,49 +441,23 @@ app.get('/api/search', (req, res) => {
       });
     }
 
-    for (const q of s.impQuestions) {
-      if (q.question && q.question.toLowerCase().includes(query)) {
-        matchedIMPs.push({
-          subjectId: s.id,
-          subjectName: s.name,
-          track: s.track,
-          questionId: q.id,
-          question: q.question,
-          marks: q.marks,
-          frequency: q.frequency
-        });
-      }
-    }
-
-    for (const n of s.notes) {
-      if (n.title && n.title.toLowerCase().includes(query)) {
-        matchedNotes.push({
-          subjectId: s.id,
-          subjectName: s.name,
-          track: s.track,
-          noteId: n.id,
-          title: n.title,
-          pages: n.pages
-        });
-      }
-    }
   }
 
   res.json({
     success: true,
     data: {
       subjects: matchedSubjects.slice(0, 10),
-      impQuestions: matchedIMPs.slice(0, 10),
-      notes: matchedNotes.slice(0, 10)
+      resources: getAllResourceRecords().filter(resource => `${resource.title} ${resource.subjectName}`.toLowerCase().includes(query)).slice(0, 10),
+      lectures: getAllLectureRecords().filter(lecture => `${lecture.title} ${lecture.subjectName} ${lecture.lecturer}`.toLowerCase().includes(query)).slice(0, 10)
     }
   });
 });
 
 // 7. Stats
 app.get('/api/stats', (req, res) => {
-  const totalNotes = normalizedSubjects.reduce((acc, s) => acc + s.notes.length, 0);
-  const totalIMPs = normalizedSubjects.reduce((acc, s) => acc + s.impQuestions.length, 0);
-  const totalPYQs = normalizedSubjects.reduce((acc, s) => acc + s.pyqs.length, 0);
+  const resources = getAllResourceRecords();
+  const totalNotes = resources.filter(resource => resource.category === 'notes').length;
+  const totalPYQs = resources.filter(resource => resource.category === 'pyqs').length;
   const majorCount = normalizedSubjects.filter(s => s.track === 'major').length;
   const minorCount = normalizedSubjects.filter(s => s.track === 'minor').length;
 
@@ -451,28 +470,11 @@ app.get('/api/stats', (req, res) => {
       majorCount: majorCount,
       minorCount: minorCount,
       notesCount: totalNotes,
-      impsCount: totalIMPs,
       pyqsCount: totalPYQs,
-      activeStudents: "25,000+ Enrolled Students",
-      announcement: siteAnnouncement,
-      academicNotices: academicNotices
+      pdfCount: resources.filter(resource => resource.category === 'pdf').length,
+      lecturesCount: getAllLectureRecords().length,
+      noticeCount: rawData.notices.length
     }
-  });
-});
-
-// 8. Announcement & Academic Notices
-app.get('/api/announcement', (req, res) => {
-  res.json({
-    success: true,
-    announcement: siteAnnouncement,
-    notices: academicNotices
-  });
-});
-
-app.get('/api/academic-notices', (req, res) => {
-  res.json({
-    success: true,
-    notices: academicNotices
   });
 });
 
@@ -481,233 +483,380 @@ app.post('/api/auth/login', (req, res) => {
   const { username, password, role } = req.body;
 
   if (role === 'admin') {
-    if (username === 'admin' && (password === 'admin123' || password === 'admin')) {
-      return res.json({
-        success: true,
-        user: { username: 'admin', name: 'DBCM Administrator', role: 'admin', token: 'admin-auth-token-dbcm' }
-      });
-    } else {
-      return res.status(401).json({ success: false, message: 'Invalid Admin credentials. Use admin / admin123' });
+    const configuredUsername = process.env.ADMIN_USERNAME;
+    const configuredPassword = process.env.ADMIN_PASSWORD;
+    if (!configuredUsername || !configuredPassword) {
+      return res.status(503).json({ success: false, message: 'Admin sign-in is not configured on this server.' });
     }
-  } else {
-    const rollOrName = username && username.trim() !== '' ? username.trim() : 'Student';
-    return res.json({
-      success: true,
-      user: {
-        username: rollOrName,
-        name: rollOrName,
-        role: 'student',
-        department: req.body.department || req.body.branch || 'bca',
-        track: req.body.track || 'major',
-        semester: req.body.semester || 1,
-        token: 'student-session-dbcm'
-      }
-    });
+    if (typeof username !== 'string' || typeof password !== 'string' || username.length > 256 || password.length > 256) {
+      return res.status(400).json({ success: false, message: 'Enter valid administrator credentials.' });
+    }
+
+    const address = req.ip || req.socket.remoteAddress || 'unknown';
+    const now = Date.now();
+    const attempt = loginAttempts.get(address) || { count: 0, resetAt: now + 15 * 60 * 1000 };
+    if (attempt.resetAt <= now) {
+      attempt.count = 0;
+      attempt.resetAt = now + 15 * 60 * 1000;
+    }
+    if (attempt.count >= 10) {
+      return res.status(429).json({ success: false, message: 'Too many sign-in attempts. Try again later.' });
+    }
+
+    if (!safeEqual(username, configuredUsername) || !safeEqual(password, configuredPassword)) {
+      attempt.count += 1;
+      loginAttempts.set(address, attempt);
+      return res.status(401).json({ success: false, message: 'Invalid administrator credentials.' });
+    }
+
+    loginAttempts.delete(address);
+    const token = crypto.randomBytes(32).toString('hex');
+    adminSessions.set(token, { expiresAt: now + SESSION_TTL_MS });
+    setSessionCookie(res, token, SESSION_TTL_MS / 1000);
+    return res.json({ success: true, user: { username: configuredUsername, name: 'DBCM Administrator', role: 'admin' } });
   }
+  return res.status(400).json({ success: false, message: 'Unsupported sign-in role.' });
+});
+
+app.get('/api/auth/session', (req, res) => {
+  const session = adminSessions.get(getSessionToken(req));
+  res.json({ authenticated: !!session && session.expiresAt > Date.now() });
+});
+
+app.post('/api/auth/logout', (req, res) => {
+  adminSessions.delete(getSessionToken(req));
+  setSessionCookie(res, '', 0);
+  res.json({ success: true });
 });
 
 // --- ADMIN MANAGEMENT ENDPOINTS ---
+app.use('/api/admin', requireAdmin);
 
-// Update Site Announcement
-app.post('/api/admin/announcement', (req, res) => {
-  const { announcement } = req.body;
-  if (!announcement || !announcement.trim()) {
-    return res.status(400).json({ success: false, message: 'Announcement text is required' });
-  }
-  siteAnnouncement = announcement.trim();
-  res.json({ success: true, message: 'Announcement updated successfully', announcement: siteAnnouncement });
+app.get('/api/admin/resources', (req, res) => {
+  const data = filterByCourse(getAllResourceRecords(), req.query);
+  const category = req.query.category;
+  const filtered = category ? data.filter(resource => resource.category === category) : data;
+  res.json({ success: true, count: filtered.length, data: filtered });
 });
 
-// Update Academic Notices (Curriculum Update, Lecture Notes, High-Yield IMPs)
-app.post('/api/admin/academic-notices', (req, res) => {
-  const { notices, id, title, desc } = req.body;
+function refreshNormalizedSubjects() {
+  normalizedSubjects = (rawData.subjects || []).map(normalizeSubject);
+}
 
-  if (Array.isArray(notices)) {
-    // Bulk update notices
-    notices.forEach(n => {
-      const target = academicNotices.find(e => e.id === n.id);
-      if (target) {
-        if (n.title !== undefined) target.title = n.title.trim();
-        if (n.desc !== undefined) target.desc = n.desc.trim();
-      }
-    });
-  } else if (id) {
-    // Single notice update
-    const target = academicNotices.find(e => e.id === id);
-    if (!target) {
-      return res.status(404).json({ success: false, message: `Notice with ID '${id}' not found` });
+function locateResource(id) {
+  for (const subject of rawData.subjects || []) {
+    const resource = (subject.resources || []).find(item => item.id === id);
+    if (resource) return { subject, resource, source: 'resources' };
+    if (id === `syllabus-${subject.id}` && subject.syllabusPdfUrl) {
+      return { subject, source: 'syllabus', resource: { id, category: 'pdf', title: `${subject.code} Syllabus`, fileName: subject.syllabusFileName, fileSize: subject.syllabusFileSize, fileUrl: subject.syllabusPdfUrl } };
     }
-    if (title !== undefined) target.title = title.trim();
-    if (desc !== undefined) target.desc = desc.trim();
-  } else {
-    return res.status(400).json({ success: false, message: 'Valid notices array or id with title/desc is required' });
+    for (const key of ['notes', 'pyqs']) {
+      const item = (subject[key] || []).find(entry => entry.id === id);
+      if (item) return { subject, resource: { ...item, category: key, fileUrl: item.fileUrl || item.pdfUrl }, source: key, original: item };
+    }
+  }
+  return null;
+}
+
+function validateResourceInput({ category, title, description }) {
+  return ['pdf', 'notes', 'pyqs'].includes(category) &&
+    typeof title === 'string' && title.trim().length > 0 && title.trim().length <= 140 &&
+    (description === undefined || (typeof description === 'string' && description.length <= 1000));
+}
+
+app.post('/api/admin/resources', (req, res) => {
+  const { subjectId, category, title, description = '', fileName, fileData } = req.body;
+  const subject = getRawSubject(subjectId);
+  if (!subject) return res.status(404).json({ success: false, message: 'Subject not found.' });
+  if (!validateResourceInput({ category, title, description }) || !fileData) {
+    return res.status(400).json({ success: false, message: 'Choose a resource type, title, and PDF file.' });
   }
 
-  rawData.academicNotices = academicNotices;
-  persistCurriculum();
+  let fileUrl;
+  try {
+    fileUrl = saveBase64File(fileData, fileName);
+  } catch (error) {
+    console.error('[Upload Error]', error.message);
+    return res.status(400).json({ success: false, message: 'The PDF could not be saved.' });
+  }
+  if (!fileUrl) return res.status(400).json({ success: false, message: 'Upload a valid PDF no larger than 15 MB.' });
 
-  res.json({
-    success: true,
-    message: 'Academic announcement notice updated successfully!',
-    notices: academicNotices
-  });
+  const resource = {
+    id: crypto.randomUUID(), category, title: title.trim(), description: description.trim(),
+    fileName: path.basename(fileName || fileUrl), fileSize: fs.statSync(getStoredUploadPath(fileUrl)).size,
+    fileUrl, uploadedAt: new Date().toISOString()
+  };
+  subject.resources = subject.resources || [];
+  subject.resources.push(resource);
+  if (!persistCurriculum()) {
+    subject.resources.pop();
+    removeStoredFile(getStoredUploadPath(fileUrl));
+    return res.status(500).json({ success: false, message: 'Could not save the resource record.' });
+  }
+  refreshNormalizedSubjects();
+  res.status(201).json({ success: true, message: 'Resource uploaded.', data: getSubjectResourceRecords(subject).find(item => item.id === resource.id) });
+});
+
+app.put('/api/admin/resources/:id', (req, res) => {
+  const located = locateResource(req.params.id);
+  if (!located) return res.status(404).json({ success: false, message: 'Resource not found.' });
+  const category = req.body.category || located.resource.category;
+  const title = req.body.title === undefined ? located.resource.title : req.body.title;
+  const description = req.body.description === undefined ? located.resource.description || '' : req.body.description;
+  if (!validateResourceInput({ category, title, description })) {
+    return res.status(400).json({ success: false, message: 'Check the resource type, title, and description.' });
+  }
+
+  let newFileUrl = null;
+  if (req.body.fileData) {
+    try {
+      newFileUrl = saveBase64File(req.body.fileData, req.body.fileName || located.resource.fileName);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: 'The replacement PDF could not be saved.' });
+    }
+    if (!newFileUrl) return res.status(400).json({ success: false, message: 'Replacement must be a valid PDF no larger than 15 MB.' });
+  }
+
+  const oldFilePath = getStoredUploadPath(located.resource.fileUrl);
+  const snapshot = JSON.stringify(rawData);
+  let resource = located.resource;
+  if (located.source !== 'resources') {
+    if (located.source === 'syllabus') {
+      located.subject.syllabusPdfUrl = null;
+      located.subject.syllabusFileName = null;
+      located.subject.syllabusFileSize = null;
+    } else {
+      located.subject[located.source] = (located.subject[located.source] || []).filter(item => item.id !== located.resource.id);
+    }
+    resource = { ...located.resource, id: req.params.id, fileUrl: located.resource.fileUrl };
+    located.subject.resources = located.subject.resources || [];
+    located.subject.resources.push(resource);
+  }
+  resource.category = category;
+  resource.title = title.trim();
+  resource.description = description.trim();
+  if (newFileUrl) {
+    resource.fileUrl = newFileUrl;
+    resource.fileName = path.basename(req.body.fileName || newFileUrl);
+    resource.fileSize = fs.statSync(getStoredUploadPath(newFileUrl)).size;
+    resource.updatedAt = new Date().toISOString();
+  }
+
+  if (!persistCurriculum()) {
+    rawData = JSON.parse(snapshot);
+    refreshNormalizedSubjects();
+    if (newFileUrl) removeStoredFile(getStoredUploadPath(newFileUrl));
+    return res.status(500).json({ success: false, message: 'Could not save resource changes.' });
+  }
+  const oldFileRemoved = !newFileUrl || !oldFilePath || oldFilePath === getStoredUploadPath(newFileUrl) || removeStoredFile(oldFilePath);
+  refreshNormalizedSubjects();
+  res.json({ success: true, message: oldFileRemoved ? 'Resource updated.' : 'Resource updated, but its previous file could not be removed.', data: getSubjectResourceRecords(located.subject).find(item => item.id === resource.id) });
+});
+
+app.delete('/api/admin/resources/:id', (req, res) => {
+  const located = locateResource(req.params.id);
+  if (!located) return res.status(404).json({ success: false, message: 'Resource not found.' });
+  const snapshot = JSON.stringify(rawData);
+  const filePath = getStoredUploadPath(located.resource.fileUrl);
+  if (located.source === 'resources') {
+    located.subject.resources = located.subject.resources.filter(item => item.id !== req.params.id);
+  } else if (located.source === 'syllabus') {
+    located.subject.syllabusPdfUrl = null;
+    located.subject.syllabusFileName = null;
+    located.subject.syllabusFileSize = null;
+  } else {
+    located.subject[located.source] = located.subject[located.source].filter(item => item.id !== req.params.id);
+  }
+  if (!persistCurriculum()) {
+    rawData = JSON.parse(snapshot);
+    refreshNormalizedSubjects();
+    return res.status(500).json({ success: false, message: 'Could not delete the resource record.' });
+  }
+  const fileRemoved = removeStoredFile(filePath);
+  refreshNormalizedSubjects();
+  res.json({ success: true, message: fileRemoved ? 'Resource deleted.' : 'Resource record deleted, but its stored file could not be removed.' });
+});
+
+app.post('/api/admin/lectures', (req, res) => {
+  const { subjectId, title, url, description = '', lecturer = '' } = req.body;
+  const subject = getRawSubject(subjectId);
+  if (!subject) return res.status(404).json({ success: false, message: 'Subject not found.' });
+  if (typeof title !== 'string' || !title.trim() || title.length > 140 || !isValidLectureUrl(url) || description.length > 1000 || lecturer.length > 120) {
+    return res.status(400).json({ success: false, message: 'Enter a title and a valid HTTPS lecture URL. Optional fields are limited in length.' });
+  }
+  const lecture = { id: crypto.randomUUID(), title: title.trim(), url, description: description.trim(), lecturer: lecturer.trim(), createdAt: new Date().toISOString() };
+  subject.lectures = subject.lectures || [];
+  subject.lectures.push(lecture);
+  if (!persistCurriculum()) {
+    subject.lectures.pop();
+    return res.status(500).json({ success: false, message: 'Could not save the lecture link.' });
+  }
+  res.status(201).json({ success: true, data: { ...lecture, subjectId, subjectName: subject.name, subjectCode: subject.code, departmentId: subject.departmentId, semester: subject.semester } });
+});
+
+app.put('/api/admin/lectures/:id', (req, res) => {
+  const lecture = getAllLectureRecords().find(item => item.id === req.params.id);
+  if (!lecture) return res.status(404).json({ success: false, message: 'Lecture link not found.' });
+  const subject = getRawSubject(req.body.subjectId || lecture.subjectId);
+  const title = req.body.title === undefined ? lecture.title : req.body.title;
+  const url = req.body.url === undefined ? lecture.url : req.body.url;
+  const description = req.body.description === undefined ? lecture.description : req.body.description;
+  const lecturer = req.body.lecturer === undefined ? lecture.lecturer : req.body.lecturer;
+  if (!subject || typeof title !== 'string' || !title.trim() || title.length > 140 || !isValidLectureUrl(url) || typeof description !== 'string' || description.length > 1000 || typeof lecturer !== 'string' || lecturer.length > 120) {
+    return res.status(400).json({ success: false, message: 'Check the course, title, HTTPS URL, and optional details.' });
+  }
+  const snapshot = JSON.stringify(rawData);
+  for (const candidate of rawData.subjects || []) {
+    candidate.lectures = (candidate.lectures || []).filter(item => item.id !== lecture.id);
+    candidate.videos = (candidate.videos || []).filter(item => item.id !== lecture.id && item.url !== lecture.url);
+  }
+  subject.lectures = subject.lectures || [];
+  const updated = { id: lecture.id, title: title.trim(), url, description: description.trim(), lecturer: lecturer.trim() };
+  subject.lectures.push(updated);
+  if (!persistCurriculum()) {
+    rawData = JSON.parse(snapshot);
+    return res.status(500).json({ success: false, message: 'Could not save lecture changes.' });
+  }
+  res.json({ success: true, data: { ...updated, subjectId: subject.id, subjectName: subject.name, subjectCode: subject.code, departmentId: subject.departmentId, semester: subject.semester } });
+});
+
+app.delete('/api/admin/lectures/:id', (req, res) => {
+  const lecture = getAllLectureRecords().find(item => item.id === req.params.id);
+  if (!lecture) return res.status(404).json({ success: false, message: 'Lecture link not found.' });
+  const snapshot = JSON.stringify(rawData);
+  for (const subject of rawData.subjects || []) {
+    subject.lectures = (subject.lectures || []).filter(item => item.id !== lecture.id);
+    subject.videos = (subject.videos || []).filter(item => item.id !== lecture.id && item.url !== lecture.url);
+  }
+  if (!persistCurriculum()) {
+    rawData = JSON.parse(snapshot);
+    return res.status(500).json({ success: false, message: 'Could not delete the lecture link.' });
+  }
+  res.json({ success: true });
+});
+
+app.post('/api/admin/notices', (req, res) => {
+  const { title, text } = req.body;
+  if (typeof title !== 'string' || !title.trim() || title.length > 140 || typeof text !== 'string' || !text.trim() || text.length > 3000) {
+    return res.status(400).json({ success: false, message: 'Enter a notice title and text (up to 3,000 characters).' });
+  }
+  const notice = { id: crypto.randomUUID(), title: title.trim(), text: text.trim(), createdAt: new Date().toISOString() };
+  rawData.notices.push(notice);
+  if (!persistCurriculum()) {
+    rawData.notices.pop();
+    return res.status(500).json({ success: false, message: 'Could not save this notice.' });
+  }
+  res.status(201).json({ success: true, data: notice });
+});
+
+app.put('/api/admin/notices/:id', (req, res) => {
+  const notice = rawData.notices.find(item => item.id === req.params.id);
+  if (!notice) return res.status(404).json({ success: false, message: 'Notice not found.' });
+  const title = req.body.title === undefined ? notice.title : req.body.title;
+  const text = req.body.text === undefined ? notice.text : req.body.text;
+  if (typeof title !== 'string' || !title.trim() || title.length > 140 || typeof text !== 'string' || !text.trim() || text.length > 3000) {
+    return res.status(400).json({ success: false, message: 'Enter a notice title and text (up to 3,000 characters).' });
+  }
+  const previous = { title: notice.title, text: notice.text, updatedAt: notice.updatedAt };
+  notice.title = title.trim();
+  notice.text = text.trim();
+  notice.updatedAt = new Date().toISOString();
+  if (!persistCurriculum()) {
+    Object.assign(notice, previous);
+    return res.status(500).json({ success: false, message: 'Could not save notice changes.' });
+  }
+  res.json({ success: true, data: notice });
+});
+
+app.delete('/api/admin/notices/:id', (req, res) => {
+  const index = rawData.notices.findIndex(item => item.id === req.params.id);
+  if (index < 0) return res.status(404).json({ success: false, message: 'Notice not found.' });
+  const [notice] = rawData.notices.splice(index, 1);
+  if (!persistCurriculum()) {
+    rawData.notices.splice(index, 0, notice);
+    return res.status(500).json({ success: false, message: 'Could not delete the notice.' });
+  }
+  res.json({ success: true });
 });
 
 // Add New Subject (Supports attaching Syllabus PDF from PC)
 app.post('/api/admin/subject', (req, res) => {
   const { code, name, shortName, semester, department, branch, track, credits, description, fileData, fileName, fileSize } = req.body;
-  if (!code || !name || !semester) {
-    return res.status(400).json({ success: false, message: 'Code, Name, and Semester are required' });
+  const cleanCode = cleanText(code, 24).toUpperCase();
+  const cleanName = cleanText(name, 140);
+  const dept = department || branch;
+  const subTrack = String(track || '').toLowerCase();
+  const semesterNumber = Number(semester);
+  if (!cleanCode || !cleanName || !Number.isInteger(semesterNumber) || semesterNumber < 1 || semesterNumber > 8 ||
+      !['major', 'minor'].includes(subTrack) || !defaultDepartments.some(item => item.id === dept)) {
+    return res.status(400).json({ success: false, message: 'Enter a valid course code, title, department, track, and semester.' });
+  }
+  if ((rawData.subjects || []).some(subject => subject.code.toLowerCase() === cleanCode.toLowerCase())) {
+    return res.status(409).json({ success: false, message: 'A subject with this course code already exists.' });
   }
 
-  const dept = department || branch || 'bca';
-  const subTrack = (track || 'major').toLowerCase();
-
-  // Save syllabus PDF if provided
   let syllabusPdfUrl = null;
   if (fileData) {
-    const defaultSyllabusName = `${code.trim().toUpperCase()}_Syllabus.pdf`;
-    syllabusPdfUrl = saveBase64File(fileData, fileName || defaultSyllabusName);
+    try {
+      syllabusPdfUrl = saveBase64File(fileData, fileName || `${cleanCode}_Syllabus.pdf`);
+    } catch (error) {
+      return res.status(400).json({ success: false, message: 'The syllabus PDF could not be saved.' });
+    }
+    if (!syllabusPdfUrl) return res.status(400).json({ success: false, message: 'Syllabus must be a valid PDF no larger than 15 MB.' });
   }
 
   const newSubject = {
-    id: `${code.toLowerCase().replace(/[^a-z0-9]/g, '')}-${(shortName || code).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
-    code: code.trim().toUpperCase(),
-    name: name.trim(),
-    shortName: (shortName || name).trim(),
-    semester: parseInt(semester, 10),
+    id: `${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}-${cleanText(shortName || cleanName, 60).toLowerCase().replace(/[^a-z0-9]/g, '')}`,
+    code: cleanCode,
+    name: cleanName,
+    shortName: cleanText(shortName || cleanName, 60),
+    semester: semesterNumber,
     track: subTrack,
     departmentId: dept,
     branches: [dept],
-    credits: parseInt(credits, 10) || (subTrack === 'major' ? 4 : 3),
-    description: description ? description.trim() : `${name} curriculum for DBCM degree program.`,
+    credits: Number.isInteger(Number(credits)) && Number(credits) > 0 ? Number(credits) : (subTrack === 'major' ? 4 : 3),
+    description: cleanText(description, 1000),
     syllabusPdfUrl: syllabusPdfUrl || null,
-    syllabusFileName: fileName || (syllabusPdfUrl ? path.basename(syllabusPdfUrl) : null),
-    syllabusFileSize: fileSize || null,
-    modules: [
-      { num: 1, title: "Introduction & Unit 1", weightage: "14 Marks", summary: "Module 1 syllabus overview." },
-      { num: 2, title: "Core Concepts & Unit 2", weightage: "16 Marks", summary: "Module 2 syllabus overview." },
-      { num: 3, title: "Advanced Topics & Unit 3", weightage: "18 Marks", summary: "Module 3 syllabus overview." },
-      { num: 4, title: "Applied Problem Solving", weightage: "16 Marks", summary: "Module 4 syllabus overview." },
-      { num: 5, title: "Standards & Governance", weightage: "14 Marks", summary: "Module 5 syllabus overview." },
-      { num: 6, title: "Modern Applications", weightage: "12 Marks", summary: "Module 6 syllabus overview." }
-    ],
-    impQuestions: [],
+    syllabusFileName: syllabusPdfUrl ? path.basename(syllabusPdfUrl) : null,
+    syllabusFileSize: syllabusPdfUrl ? fs.statSync(getStoredUploadPath(syllabusPdfUrl)).size : null,
+    modules: [],
     notes: [],
     pyqs: [],
-    videos: []
+    lectures: [],
+    resources: []
   };
-
-  const normalized = normalizeSubject(newSubject);
-  normalizedSubjects.unshift(normalized);
 
   if (!rawData.subjects) rawData.subjects = [];
   rawData.subjects.unshift(newSubject);
-  persistCurriculum();
+  if (!persistCurriculum()) {
+    rawData.subjects.shift();
+    if (syllabusPdfUrl) removeStoredFile(getStoredUploadPath(syllabusPdfUrl));
+    return res.status(500).json({ success: false, message: 'Could not save the new subject.' });
+  }
+  refreshNormalizedSubjects();
 
-  res.json({ 
+  res.status(201).json({
     success: true, 
-    message: `Subject added successfully to DBCM Study Material (${subTrack.toUpperCase()})!${syllabusPdfUrl ? ' (Syllabus PDF uploaded)' : ''}`, 
-    data: normalized 
-  });
-});
-
-// Upload/Add Material to existing Subject (Notes, IMP Question, or PYQ, with PC PDF upload)
-app.post('/api/admin/upload-material', (req, res) => {
-  const { subjectId, materialType, data } = req.body;
-  if (!subjectId || !materialType || !data) {
-    return res.status(400).json({ success: false, message: 'Subject ID, Material Type, and Data are required' });
-  }
-
-  const subject = normalizedSubjects.find(s => s.id === subjectId || s.code.toLowerCase() === subjectId.toLowerCase());
-  if (!subject) {
-    return res.status(404).json({ success: false, message: 'Target subject not found' });
-  }
-
-  // Save attached PDF / document if provided
-  let fileUrl = null;
-  const rawBase64 = data.fileData || req.body.fileData;
-  const originalFileName = data.fileName || req.body.fileName;
-  const originalFileSize = data.fileSize || req.body.fileSize;
-
-  if (rawBase64) {
-    fileUrl = saveBase64File(rawBase64, originalFileName || `${subject.code}_${materialType}.pdf`);
-  }
-
-  // Also locate the rawSubject in rawData.subjects so changes are persisted to disk
-  let rawSub = (rawData.subjects || []).find(s => s.id === subject.id || (s.code && s.code.toLowerCase() === subject.code.toLowerCase()));
-  if (!rawSub) {
-    if (!rawData.subjects) rawData.subjects = [];
-    rawSub = JSON.parse(JSON.stringify(subject));
-    rawData.subjects.push(rawSub);
-  }
-
-  if (materialType === 'note') {
-    const newNote = {
-      id: `note-${Date.now()}`,
-      title: data.title || (originalFileName ? originalFileName.replace(/\.[^/.]+$/, '') : 'Lecture Notes'),
-      pages: parseInt(data.pages, 10) || 24,
-      author: data.author || 'DBCM Faculty',
-      reads: 1,
-      content: data.content || '',
-      pdfUrl: fileUrl || data.pdfUrl || null,
-      fileName: originalFileName || (fileUrl ? path.basename(fileUrl) : null),
-      fileSize: originalFileSize || null,
-      uploadedAt: new Date().toISOString()
-    };
-    subject.notes.unshift(newNote);
-    if (!rawSub.notes) rawSub.notes = [];
-    rawSub.notes.unshift(newNote);
-  } else if (materialType === 'imp') {
-    const newImp = {
-      id: `q-admin-${Date.now()}`,
-      module: parseInt(data.module, 10) || 1,
-      marks: parseInt(data.marks, 10) || 10,
-      frequency: data.frequency || 'DBCM Mid/End Sem Regular',
-      question: data.question || 'Sample High-Yield Question',
-      answerHint: data.answerHint || 'Refer to classroom lecture notes.',
-      pdfUrl: fileUrl || data.pdfUrl || null,
-      fileName: originalFileName || (fileUrl ? path.basename(fileUrl) : null),
-      fileSize: originalFileSize || null
-    };
-    subject.impQuestions.unshift(newImp);
-    if (!rawSub.impQuestions) rawSub.impQuestions = [];
-    rawSub.impQuestions.unshift(newImp);
-  } else if (materialType === 'pyq') {
-    const newPyq = {
-      year: data.year || '2024',
-      session: data.session || 'Regular Exam',
-      pages: parseInt(data.pages, 10) || 4,
-      paperType: data.paperType || `DBCM End-Semester Exam (${subject.track.toUpperCase()})`,
-      totalMarks: parseInt(data.totalMarks, 10) || 80,
-      pdfUrl: fileUrl || data.pdfUrl || null,
-      fileName: originalFileName || (fileUrl ? path.basename(fileUrl) : null),
-      fileSize: originalFileSize || null,
-      uploadedAt: new Date().toISOString()
-    };
-    subject.pyqs.unshift(newPyq);
-    if (!rawSub.pyqs) rawSub.pyqs = [];
-    rawSub.pyqs.unshift(newPyq);
-  } else {
-    return res.status(400).json({ success: false, message: 'Invalid material type. Use note, imp, or pyq.' });
-  }
-
-  persistCurriculum();
-  res.json({ 
-    success: true, 
-    message: `Successfully added ${materialType.toUpperCase()} to ${subject.name}!${fileUrl ? ' (File attached & saved)' : ''}`, 
-    data: subject 
+    message: `Subject added successfully${syllabusPdfUrl ? ' with syllabus PDF' : ''}.`,
+    data: normalizedSubjects.find(subject => subject.id === newSubject.id)
   });
 });
 
 // Delete Subject
 app.delete('/api/admin/subject/:id', (req, res) => {
   const id = req.params.id;
-  normalizedSubjects = normalizedSubjects.filter(s => s.id !== id);
-  if (rawData.subjects) {
-    rawData.subjects = rawData.subjects.filter(s => s.id !== id);
+  const subject = getRawSubject(id);
+  if (!subject) return res.status(404).json({ success: false, message: 'Subject not found.' });
+  const snapshot = JSON.stringify(rawData);
+  const files = new Set(getSubjectResourceRecords(subject).map(resource => getStoredUploadPath(resource.url)).filter(Boolean));
+  rawData.subjects = (rawData.subjects || []).filter(item => item.id !== subject.id);
+  if (!persistCurriculum()) {
+    rawData = JSON.parse(snapshot);
+    refreshNormalizedSubjects();
+    return res.status(500).json({ success: false, message: 'Could not delete the subject.' });
   }
-  persistCurriculum();
+  for (const filePath of files) removeStoredFile(filePath);
+  refreshNormalizedSubjects();
   res.json({ success: true, message: 'Subject deleted successfully' });
 });
 

@@ -41,11 +41,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Structures, Unions & Preprocessors', weightage: '12 Marks', summary: 'User-defined data types, nested structs, macro definitions.' },
       { num: 6, title: 'File Handling & Low-Level I/O', weightage: '12 Marks', summary: 'File pointers, sequential and random access, error handling.' }
     ],
-    impQ: [
-      { q: 'Explain dynamic memory allocation functions (malloc, calloc, realloc, free) with syntax and memory diagrams.', marks: 10, freq: 'Repeated 4 Times in DBCM Exam', hint: 'State signatures, null-checks, heap memory layout, and memory leaks.' },
-      { q: 'Differentiate between call by value and call by reference using a swap function in C.', marks: 8, freq: 'DBCM Mid-Sem & End-Sem Regular', hint: 'Provide full C code with pointer arguments and stack diagrams.' },
-      { q: 'Write a C program to multiply two 3x3 matrices with proper dimension validation.', marks: 10, freq: 'Asked in Winter 2023 Paper', hint: 'Show row-column dot product loops and boundary checks.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 1, code: 'BCA102', name: 'Computer Architecture & Digital Logic', short: 'Computer Org', credits: 4,
     desc: 'Combinational logic, flip-flops, Von Neumann architecture, instruction pipelines, and memory hierarchies.',
@@ -57,10 +52,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Memory Hierarchy & Cache Memory', weightage: '14 Marks', summary: 'SRAM, DRAM, cache mapping techniques, virtual memory.' },
       { num: 6, title: 'Input-Output Organization & DMA', weightage: '12 Marks', summary: 'Interrupts, polling, DMA controller architecture.' }
     ],
-    impQ: [
-      { q: 'Simplify the 4-variable Boolean function using K-Map and draw the NAND-only logic circuit.', marks: 10, freq: 'High Yield Paper 2024', hint: 'Group 1s into quads/octets, identify prime implicants.' },
-      { q: 'Explain Cache Memory Mapping Techniques (Direct, Associative, Set-Associative) with comparisons.', marks: 10, freq: 'DBCM Exam Regular', hint: 'Show block diagrams, tag bits, line offsets, and hit ratio formulas.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 2, code: 'BCA201', name: 'Data Structures & Algorithms', short: 'DSA', credits: 4,
     desc: 'Linear and non-linear data structures: Linked lists, stacks, queues, trees, graphs, hashing, and sorting algorithms.',
@@ -72,10 +63,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Graphs & Graph Traversals (BFS, DFS)', weightage: '14 Marks', summary: 'Adjacency matrix, adjacency lists, shortest path algorithms.' },
       { num: 6, title: 'Sorting, Searching & Hashing', weightage: '12 Marks', summary: 'QuickSort, MergeSort, Hash tables, collision resolution.' }
     ],
-    impQ: [
-      { q: 'Write complete algorithms for inserting and deleting nodes in an AVL tree with rotation examples.', marks: 12, freq: 'High Yield DBCM Question', hint: 'Explain LL, RR, LR, and RL rotations with balance factor diagrams.' },
-      { q: 'Convert Infix expression (A + B * C) / (D - E) to Postfix using stack tabular representation.', marks: 8, freq: 'Repeated 3 Times', hint: 'Create columns: Token, Action, Stack, Output String.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 2, code: 'BCA202', name: 'Object-Oriented Programming with Java', short: 'Core Java', credits: 4,
     desc: 'Classes, objects, inheritance, polymorphism, interfaces, exception handling, multithreading, and collections framework.',
@@ -87,10 +74,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Multithreading & Synchronization', weightage: '16 Marks', summary: 'Thread lifecycle, Runnable interface, synchronized blocks, deadlocks.' },
       { num: 6, title: 'Java Collections Framework', weightage: '14 Marks', summary: 'ArrayList, LinkedList, HashMap, HashSet, Iterator interface.' }
     ],
-    impQ: [
-      { q: 'Explain Java Exception Handling mechanism with try, catch, finally, throw, and throws keywords.', marks: 10, freq: 'Asked in Every DBCM Semester Exam', hint: 'Draw exception hierarchy (Throwable, Exception, RuntimeException).' },
-      { q: 'What is Multithreading in Java? Explain Thread lifecycle and thread synchronization with code.', marks: 10, freq: 'High Yield Question', hint: 'Show New, Runnable, Blocked, Waiting, Terminated states.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 3, code: 'BCA301', name: 'Database Management Systems (DBMS)', short: 'DBMS', credits: 4,
     desc: 'Relational database model, SQL queries, ER diagrams, normalization (1NF to BCNF), transaction management, and ACID properties.',
@@ -102,10 +85,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Transaction Processing & ACID', weightage: '16 Marks', summary: 'ACID properties, serializability, two-phase locking (2PL).' },
       { num: 6, title: 'Database Recovery & Indexing', weightage: '12 Marks', summary: 'Log-based recovery, checkpoints, B-Trees and B+ Trees.' }
     ],
-    impQ: [
-      { q: 'Explain Normalization from 1NF to BCNF with a practical employee-department table example.', marks: 12, freq: 'Top High-Yield DBCM Question', hint: 'Define functional dependencies and loss-less join decomposition.' },
-      { q: 'What are ACID properties? Explain how concurrency control prevents dirty read and lost update anomalies.', marks: 10, freq: 'Repeated 5 Times', hint: 'Detail Atomicity, Consistency, Isolation, Durability.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 4, code: 'BCA401', name: 'Web Technologies & Full-Stack Development', short: 'Web Tech', credits: 4,
     desc: 'Modern web architectures: HTML5/CSS3, JavaScript ES6+, React.js frontend, Node.js/Express backend, and REST APIs.',
@@ -117,10 +96,6 @@ const subjectBlueprints = [
       { num: 5, title: 'RESTful API Design & MongoDB Integration', weightage: '16 Marks', summary: 'CRUD endpoints, Mongoose models, JWT authentication.' },
       { num: 6, title: 'Web Security & Deployment', weightage: '12 Marks', summary: 'CORS, XSS, CSRF prevention, Git and cloud deployment.' }
     ],
-    impQ: [
-      { q: 'Explain React Component Lifecycle and state management using useState and useEffect hooks with code.', marks: 10, freq: 'DBCM 2024 Exam Paper', hint: 'Compare class lifecycle with hooks dependency arrays.' },
-      { q: 'How does Node.js Event Loop work? Explain non-blocking asynchronous I/O architecture.', marks: 10, freq: 'High Yield Paper', hint: 'Diagram libuv, event queue, call stack, worker threads.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 5, code: 'BCA501', name: 'Computer Networks & Security', short: 'Networks', credits: 4,
     desc: 'OSI 7-layer model, TCP/IP, IP addressing, routing algorithms, cryptographic ciphers, and firewalls.',
@@ -132,10 +107,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Application Layer Protocols', weightage: '14 Marks', summary: 'DNS, HTTP/HTTPS, FTP, SMTP, DHCP services.' },
       { num: 6, title: 'Network Security & Cryptography', weightage: '14 Marks', summary: 'RSA algorithm, symmetric ciphers, SSL/TLS, firewalls.' }
     ],
-    impQ: [
-      { q: 'Compare OSI 7-Layer Model with TCP/IP Model with functions of every single layer.', marks: 10, freq: 'DBCM Core Exam Question', hint: 'Draw layer comparison diagram with PDU names.' },
-      { q: 'Perform IPv4 Subnetting: Given IP 192.168.10.0/24, create 4 usable subnets and list range of valid hosts.', marks: 10, freq: 'Numerical High Yield', hint: 'Show borrow bits, subnet mask /26, network/broadcast addresses.' }
-    ]
   },
   { dept: 'bca', track: 'major', sem: 6, code: 'BCA601', name: 'Artificial Intelligence & Machine Learning', short: 'AI & ML', credits: 4,
     desc: 'Search heuristics, knowledge representation, supervised and unsupervised learning, neural networks, and model evaluation.',
@@ -147,10 +118,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Artificial Neural Networks', weightage: '16 Marks', summary: 'Perceptrons, multi-layer perceptron, backpropagation algorithm.' },
       { num: 6, title: 'Model Evaluation & Ethical AI', weightage: '12 Marks', summary: 'Precision, recall, F1-score, ROC curves, bias and fairness.' }
     ],
-    impQ: [
-      { q: 'Explain A* Search algorithm with admissibility and consistency of heuristic functions.', marks: 10, freq: 'DBCM Final Exam Paper', hint: 'State f(n) = g(n) + h(n), provide 8-puzzle or graph search example.' },
-      { q: 'Derive Backpropagation weight update rule in a Multi-Layer Feedforward Neural Network.', marks: 12, freq: 'High Yield Regular Question', hint: 'Apply chain rule of partial derivatives on Mean Squared Error.' }
-    ]
   },
   // BCA Minor Subjects
   { dept: 'bca', track: 'minor', sem: 1, code: 'BCAM101', name: 'IT Fundamentals & Office Automation', short: 'IT Basics (Minor)', credits: 3,
@@ -163,10 +130,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Internet, Email & Cloud Collaboration', weightage: '16 Marks', summary: 'Google Drive, OneDrive, web safety, netiquette.' },
       { num: 6, title: 'Information Security Essentials', weightage: '16 Marks', summary: 'Passwords, two-factor authentication, phishing defense.' }
     ],
-    impQ: [
-      { q: 'Explain the Mail Merge feature in Microsoft Word with step-by-step instructions.', marks: 8, freq: 'DBCM Minor Paper Regular', hint: 'List: main document, data source, merge fields, finish.' },
-      { q: 'What is VLOOKUP in Excel? Explain its syntax and give a clear example with a student marksheet.', marks: 10, freq: 'High Yield Practical Exam', hint: 'Detail lookup_value, table_array, col_index, range_lookup.' }
-    ]
   },
   { dept: 'bca', track: 'minor', sem: 2, code: 'BCAM201', name: 'Web Designing & HTML5/CSS3', short: 'Web Design (Minor)', credits: 3,
     desc: 'Creation of modern responsive web pages without programming prerequisites. HTML5 semantics, CSS styling, flexbox, and site publishing.',
@@ -178,9 +141,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Images, Media & Embeds', weightage: '16 Marks', summary: 'Audio, video, iframes, SVG graphics.' },
       { num: 6, title: 'Website Publishing & Free Hosting', weightage: '16 Marks', summary: 'GitHub Pages, Netlify deployment basics.' }
     ],
-    impQ: [
-      { q: 'Explain CSS Box Model with a neat labeled diagram showing margin, border, padding, and content.', marks: 8, freq: 'DBCM Exam Regular', hint: 'Draw nested boxes and calculate total element width.' }
-    ]
   },
   { dept: 'bca', track: 'minor', sem: 3, code: 'BCAM301', name: 'Introduction to Python for Non-Majors', short: 'Python Minor', credits: 3,
     desc: 'Gentle introduction to scripting with Python: syntax, conditionals, loops, lists, dictionaries, and automated file tasks.',
@@ -192,9 +152,6 @@ const subjectBlueprints = [
       { num: 5, title: 'File Reading & Simple Automation', weightage: '16 Marks', summary: 'Reading text and CSV files, writing output.' },
       { num: 6, title: 'Basic Data Visualization with Matplotlib', weightage: '15 Marks', summary: 'Bar charts, line graphs, pie charts.' }
     ],
-    impQ: [
-      { q: 'Differentiate between List and Dictionary in Python with syntax and sample code.', marks: 8, freq: 'DBCM Minor Regular', hint: 'Show mutable sequence vs hash table key-value pairs.' }
-    ]
   },
   { dept: 'bca', track: 'minor', sem: 4, code: 'BCAM401', name: 'Cyber Security & Digital Safety', short: 'Cyber Safety (Minor)', credits: 3,
     desc: 'Understanding cyber threats, identity theft, malware, safe social media practices, and Indian Cyber Laws (IT Act 2000).',
@@ -206,9 +163,6 @@ const subjectBlueprints = [
       { num: 5, title: 'Online Financial Fraud & UPI Safety', weightage: '16 Marks', summary: 'Safe banking practices, reporting unauthorized transactions.' },
       { num: 6, title: 'Indian IT Act 2000 & Cyber Grievance Reporting', weightage: '16 Marks', summary: 'Legal penalties, cyber crime cell reporting.' }
     ],
-    impQ: [
-      { q: 'Explain Phishing and Spear-Phishing attacks. How can everyday computer users protect themselves?', marks: 10, freq: 'High Yield DBCM Question', hint: 'Detail fake URLs, email headers, MFA, and red flags.' }
-    ]
   }
 ];
 
@@ -497,11 +451,6 @@ deptTemplates.forEach(dt => {
         { num: 5, title: 'Institutional Standards & Contemporary Debates', weightage: '14 Marks', summary: `Contemporary academic literature, practical constraints, and industry relevance.` },
         { num: 6, title: 'Advanced Innovations & Case Studies', weightage: '12 Marks', summary: `Recent developments, comparative monographs, and field implementations.` }
       ],
-      impQ: [
-        { q: `Explain the fundamental concepts and core theoretical significance of ${m.name} in modern academic study.`, marks: 10, freq: 'DBCM End-Sem Regular Paper', hint: 'State standard definitions, structural characteristics, and draw relevant illustrative diagrams.' },
-        { q: `Discuss the governing operational models and critical comparative factors associated with ${m.name}.`, marks: 10, freq: 'High Yield Exam Question', hint: 'Detail step-by-step methodologies with appropriate real-world applications.' },
-        { q: `Analyze the contemporary practical challenges and solutions in the context of ${m.name}.`, marks: 8, freq: 'DBCM Mid-Sem Exam', hint: 'Present a structured balanced argument with standard academic citations.' }
-      ]
     });
   });
 
@@ -521,18 +470,12 @@ deptTemplates.forEach(dt => {
         { num: 3, title: 'Applied Case Analysis & Solutions', weightage: '18 Marks', summary: `Practical scenarios and hands-on case studies.` },
         { num: 4, title: 'Contemporary Trends & Community Impact', weightage: '16 Marks', summary: `Relevance to everyday life, ethical guidelines, and civic responsibility.` }
       ],
-      impQ: [
-        { q: `Explain the practical significance and everyday applications of ${m.name}.`, marks: 8, freq: 'DBCM Minor Regular Exam', hint: 'Provide clear, practical examples and outline key operational steps.' },
-        { q: `Discuss the key guidelines and best practices learned in ${m.name} for non-specialist students.`, marks: 8, freq: 'High Yield Paper', hint: 'Highlight safety, methodology, and common real-world use cases.' }
-      ]
     });
   });
 });
 
 // Format subjects into the application's standard structure
 const formattedSubjects = allSubjects.map(s => {
-  const deptObj = departments.find(d => d.id === s.dept) || { name: s.dept };
-  
   return {
     id: `${s.code.toLowerCase().replace(/[^a-z0-9]/g, '')}-${(s.short || 'sub').toLowerCase().replace(/[^a-z0-9]/g, '')}`,
     code: s.code,
@@ -550,27 +493,11 @@ const formattedSubjects = allSubjects.map(s => {
     passingProbability: '92%+',
     description: s.desc,
     modules: s.modules,
-    impQuestions: s.impQ.map((q, idx) => ({
-      id: `q-${s.code.toLowerCase()}-${idx + 1}`,
-      module: idx + 1,
-      marks: q.marks,
-      frequency: q.freq,
-      question: q.question,
-      answerHint: q.hint
-    })),
-    notes: [
-      { id: `n-${s.code.toLowerCase()}-1`, title: `${s.name} - Complete DBCM Department Notes`, pages: 58, author: `DBCM ${deptObj.name} Faculty`, reads: 14200 },
-      { id: `n-${s.code.toLowerCase()}-2`, title: `${s.name} - Unit Summaries & Quick Revision Guide`, pages: 22, author: "DBCM Subject Cell", reads: 9800 }
-    ],
-    pyqs: [
-      { year: "May / June 2024", session: "Summer 2024", pages: 4, paperType: `DBCM End-Semester Exam (${s.track.toUpperCase()})`, totalMarks: 80 },
-      { year: "Nov / Dec 2023", session: "Winter 2023", pages: 4, paperType: `DBCM End-Semester Exam (${s.track.toUpperCase()})`, totalMarks: 80 },
-      { year: "May / June 2023", session: "Summer 2023", pages: 4, paperType: `DBCM End-Semester Exam (${s.track.toUpperCase()})`, totalMarks: 80 }
-    ],
-    videos: [
-      { channel: `DBCM ${deptObj.name} Faculty`, title: `${s.name} Complete Video Lectures`, url: "https://www.youtube.com", count: 28 },
-      { channel: "Academic Masterclass", title: `${s.name} Comprehensive Review`, url: "https://www.youtube.com", count: 18 }
-    ]
+    impQuestions: [],
+    notes: [],
+    pyqs: [],
+    lectures: [],
+    resources: []
   };
 });
 
@@ -593,16 +520,22 @@ const outputData = {
     location: "DBCM Academic Campus",
     icon: "graduation-cap",
     schemes: ["DBCM Autonomous NEP 2024", "Major-Minor Degree Framework", "CBCS Undergraduate"],
-    totalStudents: "25,000+ Enrolled Students",
-    rating: 4.96
+    totalStudents: null,
+    rating: null
   },
   departments: departments,
   semesters: semesters,
-  subjects: formattedSubjects
+  subjects: formattedSubjects,
+  notices: []
 };
 
-const targetPath = path.join(__dirname, '..', 'data', 'curriculum.json');
-fs.writeFileSync(targetPath, JSON.stringify(outputData, null, 2));
+const targetPaths = [
+  path.join(__dirname, '..', 'data', 'curriculum.json'),
+  path.join(__dirname, '..', 'public', 'data', 'curriculum.json')
+];
+for (const targetPath of targetPaths) {
+  fs.writeFileSync(targetPath, `${JSON.stringify(outputData, null, 2)}\n`);
+}
 
 console.log(`Successfully generated curriculum with:`);
 console.log(`- ${departments.length} Departments`);
