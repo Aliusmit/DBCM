@@ -58,7 +58,7 @@ async function initialize() {
     state.semesters = semesters.data || [];
     state.subjects = subjects.data || [];
     state.notices = notices.data || [];
-    fillSelect(elements.department, state.departments, 'Select programme', item => item.id, item => `${item.name} (${item.code})`);
+    fillSelect(elements.department, state.departments, 'Select programme', item => item.id, item => item.name);
     renderNotices();
     setStatus(`${state.departments.length} programmes · ${state.subjects.length} subjects`, 'success');
   } catch (error) {
@@ -129,7 +129,7 @@ function selectedSubjects() {
 function renderSubjectChoices() {
   const subjects = selectedSubjects();
   const current = state.selection.subject;
-  fillSelect(elements.subject, subjects, subjects.length ? 'Select subject' : 'No matching subjects', item => item.id, item => `${item.code} · ${item.name}`);
+  fillSelect(elements.subject, subjects, subjects.length ? 'Select subject' : 'No matching subjects', item => item.id, item => item.name);
   elements.subject.disabled = !(state.selection.department && state.selection.track && state.selection.semester) || subjects.length === 0;
   if (subjects.some(subject => subject.id === current)) elements.subject.value = current;
   else if (current) clearSelectedSubject();
@@ -155,7 +155,7 @@ function renderSubjectList(subjects) {
     const title = document.createElement('h3');
     title.textContent = subject.name;
     const meta = document.createElement('p');
-    meta.textContent = `${subject.code} · ${subject.track === 'minor' ? 'Minor' : 'Major'} · Semester ${subject.semester}`;
+    meta.textContent = `${subject.track === 'minor' ? 'Minor' : 'Major'} · Semester ${subject.semester}`;
     info.append(title, meta);
     const button = document.createElement('button');
     button.type = 'button';
@@ -194,7 +194,6 @@ async function selectSubject(subjectId) {
   elements.subject.value = subjectId;
   document.getElementById('course-context').textContent = `${departmentName(subject.departmentId)} · ${subject.track === 'minor' ? 'Minor' : 'Major'} · Semester ${subject.semester}`;
   document.getElementById('course-name').textContent = subject.name;
-  document.getElementById('course-code').textContent = subject.code;
   document.getElementById('course-description').textContent = subject.description || '';
   renderOutline(subject.modules || []);
   elements.selectedCourse.hidden = false;
@@ -214,7 +213,7 @@ async function selectSubject(subjectId) {
       lectures: state.lectures.length
     };
     Object.entries(counts).forEach(([key, value]) => { document.getElementById(`count-${key}`).textContent = String(value); });
-    setStatus(`${subject.code} selected`, 'success');
+    setStatus(`${subject.name} selected`, 'success');
   } catch (error) {
     setStatus(error.message, 'error');
   }
