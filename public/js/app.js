@@ -32,6 +32,13 @@ async function initialize() {
   document.documentElement.dataset.theme = state.theme;
   updateThemeButton();
   document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+  const menuButton = document.getElementById('menu-toggle');
+  const navigation = document.getElementById('main-navigation');
+  menuButton.addEventListener('click', () => setNavigationOpen(menuButton, navigation, menuButton.getAttribute('aria-expanded') !== 'true'));
+  navigation.querySelectorAll('a').forEach(link => link.addEventListener('click', () => setNavigationOpen(menuButton, navigation, false)));
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') setNavigationOpen(menuButton, navigation, false);
+  });
   elements.department.addEventListener('change', selectDepartment);
   elements.track.addEventListener('change', selectTrack);
   elements.semester.addEventListener('change', selectSemester);
@@ -333,6 +340,12 @@ function toggleTheme() {
   document.documentElement.dataset.theme = state.theme;
   localStorage.setItem('dbcm-theme', state.theme);
   updateThemeButton();
+}
+
+function setNavigationOpen(button, navigation, isOpen) {
+  button.setAttribute('aria-expanded', String(isOpen));
+  button.setAttribute('aria-label', isOpen ? 'Close navigation' : 'Open navigation');
+  navigation.classList.toggle('is-open', isOpen);
 }
 
 function clearSelectedSubject() {
